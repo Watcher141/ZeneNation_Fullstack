@@ -1,39 +1,253 @@
 # =============================================================================
-#  DEV PROFILE — Overrides for local development
-#  Activated when: spring.profiles.active=dev
-#  Safe to commit — no real secrets here, all are local dev values
+#  ZENENATION E-COMMERCE BACKEND — MAIN CONFIGURATION
+#  Spring Boot 3.2.x | Java 17
+#
+#  HOW ENVIRONMENT VARIABLES WORK:
+#  Every value uses ${ENV_VAR:default} syntax:
+#    - ENV_VAR  → set this in your system / .env file / deployment platform
+#    - default  → used automatically if ENV_VAR is not set (local dev)
+#
+#  FOR LOCAL DEV:
+#    The defaults work out of the box. Just make sure PostgreSQL is running
+#    with a database called 'ecommerce_db'.
+#
+#  FOR TEAM TESTING / STAGING:
+#    Copy .env.example → .env and fill in real values.
+#    Or set environment variables directly in your OS / deployment config.
+#
+#  NEVER commit real secrets. The .env file is in .gitignore.
 # =============================================================================
 
 spring:
-  # Show SQL queries in console during development
+  application:
+    name: zenenation-backend
+
+  profiles:
+    active: ${SPRING_PROFILE:dev}
+
+  # ---------------------------------------------------------------------------
+  # DATABASE
+  # ---------------------------------------------------------------------------
+  datasource:
+    url:                ${DB_URL:jdbc:postgresql://localhost:5432/ecommerce_db}
+    username:           ${DB_USERNAME:postgres}
+    password:           ${DB_PASSWORD:root}
+    driver-class-name:  org.postgresql.Driver
+    hikari:
+      pool-name:          ZenenationHikariPool
+      minimum-idle:       2          # Lower for free tier (less memory)
+      maximum-pool-size:  5          # Neon free tier connection limit
+      idle-timeout:       300000
+      connection-timeout: 20000
+      max-lifetime:       1200000
+      keepalive-time:     60000      # Keep connections alive to Neon
+
+  # ---------------------------------------------------------------------------
+  # JPA / HIBERNATE
+  # ---------------------------------------------------------------------------
   jpa:
-    show-sql: true
+    hibernate:
+      ddl-auto: validate
+    show-sql: false
+    open-in-view: false
     properties:
       hibernate:
-        format_sql: true
+        dialect:        org.hibernate.dialect.PostgreSQLDialect
+        format_sql:     true
+        default_schema: public
+        jdbc:
+          batch_size:   20
+        order_inserts:  true
+        order_updates:  true
 
-  # In dev, you can use create-drop to auto-recreate schema
-  # Switch back to 'validate' once you start using Flyway migrations
-  # jpa:
-  #   hibernate:
-  #     ddl-auto: create-drop
+  # ---------------------------------------------------------------------------
+  # FLYWAY — Database Migrations
+  # ---------------------------------------------------------------------------
+  flyway:
+    enabled:             true
+    baseline-on-migrate: true
+    locations:           classpath:db/migration
+    schemas:             public
+    out-of-order:        false
+    validate-on-migrate: false
+    repair-on-migrate:   true
 
-# Swagger fully open in dev — no auth needed to access docs
-springdoc:
-  swagger-ui:
-    csrf:
+  # ---------------------------------------------------------------------------
+  # GOOGLE OAUTH2
+  # Get credentials: https://console.cloud.google.com
+  # Authorized redirect URI: http://localhost:8080/login/oauth2/code/google
+  # ---------------------------------------------------------------------------
+  security:
+    oauth2:
+      client:
+        registration:
+          google:
+            client-id:     ${GOOGLE_CLIENT_ID:your-google-client-id}
+            client-secret: ${GOOGLE_CLIENT_SECRET:your-google-client-secret}
+            scope:
+              - email
+              - profile
+            redirect-uri: "{baseUrl}/login/oauth2/code/{registrationId}"
+
+  # ---------------------------------------------------------------------------
+  # MAIL — Gmail SMTP
+  # Use a Gmail App Password (not your account password)
+  # Generate at: https://myaccount.google.com/apppasswords
+  # ---------------------------------------------------------------------------
+  mail:
+    host:     ${MAIL_HOST:smtp-relay.brevo.com}
+    port:     ${MAIL_PORT:587}
+    username: ${MAIL_USERNAME:your-email@gmail.com}
+    password: ${MAIL_PASSWORD:your-brevo-smtp-key}
+    from:     ${MAIL_FROM:zenenationstore@gmail.com}
+    properties:
+      mail:
+        smtp:
+          auth: true
+          starttls:
+            enable:   true
+            required: true
+          connectiontimeout: 5000
+          timeout:           5000
+          writetimeout:      5000
+
+  # ---------------------------------------------------------------------------
+  # FILE UPLOAD
+  # ---------------------------------------------------------------------------
+  servlet:
+    multipart:
+      enabled:          true
+      max-file-size:    10MB
+      max-request-size: 50MB
+
+  # ---------------------------------------------------------------------------
+  # JACKSON
+  # ---------------------------------------------------------------------------
+  jackson:
+    serialization:
+      write-dates-as-timestamps: false
+      fail-on-empty-beans:       false
+    deserialization:
+      fail-on-unknown-properties: false
+    default-property-inclusion: non_null
+
+# -----------------------------------------------------------------------------
+# SERVER
+# -----------------------------------------------------------------------------
+server:
+  port: ${SERVER_PORT:8080}
+  servlet:
+    context-path: /
+  error:
+    include-message:        always
+    include-binding-errors: always
+    whitelabel:
       enabled: false
+  compression:
+    enabled:    true
+    mime-types: application/json,application/xml,text/html
 
-# More verbose logging in dev
-logging:
-  level:
-    com.zenenation.backend: DEBUG
-    org.springframework.security: DEBUG
-    org.hibernate.SQL: DEBUG
-    org.hibernate.type.descriptor.sql.BasicBinder: TRACE   # Shows SQL param values
+# -----------------------------------------------------------------------------
+# JWT
+# Generate a strong secret: openssl rand -hex 64
+# -----------------------------------------------------------------------------
+jwt:
+  secret:                   ${JWT_SECRET}
+  access-token-expiration:  ${JWT_ACCESS_EXPIRATION:86400000}
+  refresh-token-expiration: ${JWT_REFRESH_EXPIRATION:604800000}
 
-# Dev-only: show full health details without auth
+# -----------------------------------------------------------------------------
+# CLOUDINARY — Image Storage
+# Get credentials: https://cloudinary.com/console
+# -----------------------------------------------------------------------------
+cloudinary:
+  cloud-name: ${CLOUDINARY_CLOUD_NAME:dhypbyizx}
+  api-key:    ${CLOUDINARY_API_KEY:your-api-key}
+  api-secret: ${CLOUDINARY_API_SECRET:your-api-secret}
+  folders:
+    products:   zenenation/products
+    categories: zenenation/categories
+
+# -----------------------------------------------------------------------------
+# RAZORPAY — Payment Gateway
+# Get credentials: https://dashboard.razorpay.com/app/keys
+# -----------------------------------------------------------------------------
+razorpay:
+  key-id:         ${RAZORPAY_KEY_ID:your-razorpay-key-id}
+  key-secret:     ${RAZORPAY_KEY_SECRET:your-razorpay-key-secret}
+  currency:       INR
+  webhook-secret: ${RAZORPAY_WEBHOOK_SECRET:your-webhook-secret}
+
+# -----------------------------------------------------------------------------
+# ACTUATOR
+# -----------------------------------------------------------------------------
 management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics
+      base-path: /actuator
   endpoint:
     health:
       show-details: always
+      # Exclude mail from health check — Render blocks SMTP outbound
+      enabled: true
+  health:
+    mail:
+      enabled: false    # Don't fail health check if SMTP unreachable
+  info:
+    env:
+      enabled: true
+
+# -----------------------------------------------------------------------------
+# SWAGGER / OPENAPI
+# Access at: http://localhost:8080/swagger-ui.html
+# -----------------------------------------------------------------------------
+springdoc:
+  api-docs:
+    path: /api-docs
+  swagger-ui:
+    path:                     /swagger-ui.html
+    tags-sorter:              alpha
+    operations-sorter:        alpha
+    display-request-duration: true
+  show-actuator: false
+
+# -----------------------------------------------------------------------------
+# APP — Custom Config
+# -----------------------------------------------------------------------------
+app:
+  cors:
+    allowed-origins:
+      - http://localhost:3000
+      - http://localhost:5173
+      - ${FRONTEND_URL:http://localhost:5173}
+
+  oauth2:
+    redirect-uri: ${OAUTH2_REDIRECT_URI:http://localhost:5173/oauth2/callback}
+
+  admin:
+    email:    ${ADMIN_EMAIL:admin@zenenation.com}
+    password: ${ADMIN_PASSWORD:changeme}
+
+  pagination:
+    default-page-size: 12
+    max-page-size:     50
+
+  order:
+    cod-max-amount: 10000
+
+# -----------------------------------------------------------------------------
+# LOGGING
+# -----------------------------------------------------------------------------
+logging:
+  level:
+    root:                                INFO
+    com.zenenation:                      DEBUG
+    org.springframework.security:        INFO
+    org.hibernate.SQL:                   INFO
+    org.hibernate.type.descriptor.sql:   INFO
+  pattern:
+    console: "%d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level %logger{36} - %msg%n"
+  file:
+    name: logs/zenenation.log
