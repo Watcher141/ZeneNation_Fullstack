@@ -135,7 +135,11 @@ public class SecurityConfig {
         List<String> origins = new ArrayList<>();
         origins.add("http://localhost:3000");
         origins.add("http://localhost:5173");
-        // Add all origins from env (includes production Vercel URL)
+        // Wildcard for all Vercel preview deployments
+        origins.add("https://*.vercel.app");
+        // Wildcard for Render preview deployments
+        origins.add("https://*.onrender.com");
+        // Add all origins from env (includes production URL)
         if (corsAllowedOrigins != null) {
             origins.addAll(corsAllowedOrigins);
         }
