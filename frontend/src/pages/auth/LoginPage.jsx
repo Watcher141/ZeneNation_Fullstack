@@ -19,7 +19,7 @@ const LoginPage = () => {
     try {
       const data = await login(form.email, form.password);
       toast.success(`Welcome back, ${data.name}!`);
-      navigate(data.role === 'ROLE_ADMIN' ? '/admin' : '/');
+      navigate(data.role === 'ROLE_ADMIN' ? '/admin' : '/home');
     } catch (err) {
       toast.error(err.response?.data?.message || 'Invalid email or password');
     } finally {

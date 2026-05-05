@@ -30,7 +30,7 @@ const RegisterPage = () => {
         phoneNumber: form.phoneNumber || undefined,
       });
       toast.success(`Welcome to Zenenation, ${data.name}!`);
-      navigate('/');
+      navigate('/home');
     } catch (err) {
       toast.error(err.response?.data?.message || 'Registration failed');
     } finally {
