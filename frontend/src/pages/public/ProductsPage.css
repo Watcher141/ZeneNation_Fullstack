@@ -1,0 +1,106 @@
+/* src/pages/public/ProductsPage.css */
+
+.products-page {
+  display: grid;
+  grid-template-columns: 220px 1fr;
+  gap: var(--space-8);
+  padding-top: var(--space-8);
+  padding-bottom: var(--space-8);
+  align-items: start;
+}
+
+.products-sidebar {
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-primary);
+  border-radius: var(--radius-lg);
+  padding: var(--space-5);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  position: sticky;
+  top: calc(var(--navbar-height) + var(--space-4));
+}
+
+.sidebar-title {
+  font-size: var(--text-sm);
+  font-weight: var(--font-semibold);
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  margin-bottom: var(--space-2);
+}
+
+.sidebar-cat-item {
+  background: none;
+  border: none;
+  color: var(--text-secondary);
+  font-size: var(--text-sm);
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  text-align: left;
+  transition: all var(--transition-fast);
+  width: 100%;
+}
+
+.sidebar-cat-item:hover {
+  background: var(--bg-hover);
+  color: var(--text-primary);
+}
+
+.sidebar-cat-item.active {
+  background: var(--accent-primary-10);
+  color: var(--accent-primary);
+  font-weight: var(--font-semibold);
+}
+
+.products-toolbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: var(--space-6);
+}
+
+.products-count {
+  color: var(--text-muted);
+  font-size: var(--text-sm);
+}
+
+.products-sort {
+  width: auto;
+  min-width: 180px;
+}
+
+.pagination {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-4);
+  margin-top: var(--space-10);
+}
+
+.pagination-info {
+  color: var(--text-muted);
+  font-size: var(--text-sm);
+}
+
+@media (max-width: 768px) {
+  .products-page {
+    grid-template-columns: 1fr;
+  }
+
+  .products-sidebar {
+    position: static;
+    flex-direction: row;
+    flex-wrap: wrap;
+    overflow-x: auto;
+  }
+
+  .sidebar-title { display: none; }
+}
+
+@media (max-width: 480px) {
+  .products-page { padding-top: var(--space-4); }
+  .products-toolbar { flex-direction: column; align-items: flex-start; gap: var(--space-3); }
+  .products-sort { width: 100%; }
+}

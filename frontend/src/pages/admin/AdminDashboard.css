@@ -1,0 +1,19 @@
+/* src/pages/admin/AdminDashboard.css */
+
+.stat-card-icon-wrap {
+  width: 48px;
+  height: 48px;
+  border-radius: var(--radius-md);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: var(--space-2);
+}
+
+/* Icon color per accent type */
+.stat-card-accent .stat-card-icon-wrap { background: var(--accent-primary-10);  color: var(--accent-primary);   }
+.stat-card-gold   .stat-card-icon-wrap { background: var(--accent-secondary-10); color: var(--accent-secondary); }
+.stat-card-green  .stat-card-icon-wrap { background: rgba(76,175,80,0.12);       color: var(--accent-green);     }
+.stat-card-blue   .stat-card-icon-wrap { background: rgba(79,195,247,0.12);      color: var(--accent-blue);      }
+.stat-card-red    .stat-card-icon-wrap { background: rgba(244,67,54,0.12);       color: var(--accent-red);       }
+.stat-card-purple .stat-card-icon-wrap { background: rgba(124,77,255,0.12);      color: var(--accent-purple);    }

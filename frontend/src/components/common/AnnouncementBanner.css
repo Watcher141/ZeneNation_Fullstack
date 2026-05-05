@@ -1,0 +1,87 @@
+/* src/components/common/AnnouncementBanner.css */
+
+.announcement-banner {
+  position: fixed;
+  top: var(--navbar-height);
+  left: 0;
+  right: 0;
+  z-index: 990;
+  padding: var(--space-2) var(--space-4);
+  animation: slideDown 0.3s ease;
+}
+
+@keyframes slideDown {
+  from { transform: translateY(-100%); opacity: 0; }
+  to   { transform: translateY(0);     opacity: 1; }
+}
+
+.announcement-inner {
+  max-width: 1200px;
+  margin: 0 auto;
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.announcement-content {
+  flex: 1;
+  font-size: var(--text-sm);
+  color: var(--text-primary);
+  text-align: center;
+}
+
+.announcement-title {
+  font-weight: var(--font-bold);
+}
+
+.announcement-message {
+  color: var(--text-secondary);
+}
+
+.announcement-dots {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+}
+
+.dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--border-secondary);
+  border: none;
+  cursor: pointer;
+  padding: 0;
+  transition: background var(--transition-fast);
+}
+
+.dot.active { width: 20px; border-radius: 4px; }
+
+.announcement-close {
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  padding: var(--space-1);
+  border-radius: var(--radius-sm);
+  display: flex;
+  align-items: center;
+  transition: all var(--transition-fast);
+  flex-shrink: 0;
+}
+
+.announcement-close:hover {
+  background: var(--bg-hover);
+  color: var(--text-primary);
+}
+
+/* Push page content down when banner is showing */
+.has-announcement .page-wrapper {
+  padding-top: calc(var(--navbar-height) + 38px);
+}
+
+@media (max-width: 768px) {
+  .announcement-inner { gap: var(--space-2); }
+  .announcement-content { text-align: left; font-size: var(--text-xs); }
+  .announcement-dots { display: none; }
+}

@@ -1,0 +1,249 @@
+/* src/pages/public/PreorderPage.css */
+
+.preorder-page {
+  padding-top: var(--space-8);
+  padding-bottom: var(--space-12);
+}
+
+/* ── Header ── */
+.preorder-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-8);
+  margin-bottom: var(--space-10);
+  flex-wrap: wrap;
+}
+
+.preorder-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  background: rgba(233,69,96,0.12);
+  border: 1px solid rgba(233,69,96,0.3);
+  color: var(--accent-primary);
+  font-size: var(--text-xs);
+  font-weight: var(--font-semibold);
+  padding: var(--space-1) var(--space-3);
+  border-radius: var(--radius-full);
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  margin-bottom: var(--space-3);
+}
+
+.preorder-header-text h1 { font-size: var(--text-3xl); margin-bottom: var(--space-2); }
+.preorder-header-text p  { color: var(--text-muted); font-size: var(--text-sm); max-width: 480px; }
+
+.preorder-payment-info {
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-primary);
+  border-radius: var(--radius-lg);
+  padding: var(--space-5);
+  min-width: 260px;
+}
+
+.preorder-payment-info h3 {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: var(--text-sm);
+  font-weight: var(--font-semibold);
+  margin-bottom: var(--space-3);
+  color: var(--accent-secondary);
+}
+
+.payment-option-info {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: var(--text-sm);
+  color: var(--text-secondary);
+  margin-bottom: var(--space-2);
+}
+
+/* ── Grid ── */
+.preorder-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: var(--space-6);
+}
+
+/* ── Card ── */
+.preorder-card {
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-primary);
+  border-radius: var(--radius-xl);
+  overflow: hidden;
+  transition: all var(--transition-normal);
+  display: flex;
+  flex-direction: column;
+}
+
+.preorder-card:hover {
+  border-color: var(--accent-primary);
+  transform: translateY(-4px);
+  box-shadow: 0 8px 32px rgba(233,69,96,0.15);
+}
+
+.preorder-card-image {
+  position: relative;
+  aspect-ratio: 1;
+  overflow: hidden;
+  display: block;
+  background: var(--bg-tertiary);
+}
+
+.preorder-card-image img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transition: transform 0.4s ease;
+}
+
+.preorder-card:hover .preorder-card-image img { transform: scale(1.05); }
+
+.preorder-no-img {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 4rem;
+  opacity: 0.2;
+}
+
+.preorder-label {
+  position: absolute;
+  top: var(--space-3);
+  left: var(--space-3);
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  background: var(--accent-primary);
+  color: white;
+  font-size: 10px;
+  font-weight: var(--font-bold);
+  padding: 4px 10px;
+  border-radius: var(--radius-full);
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+/* ── Card Body ── */
+.preorder-card-body {
+  padding: var(--space-5);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  flex: 1;
+}
+
+.preorder-category {
+  font-size: var(--text-xs);
+  color: var(--accent-primary);
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  font-weight: var(--font-semibold);
+}
+
+.preorder-name {
+  font-size: var(--text-base);
+  font-weight: var(--font-bold);
+  color: var(--text-primary);
+  text-decoration: none;
+  line-height: 1.4;
+}
+.preorder-name:hover { color: var(--accent-primary); }
+
+.preorder-tagline {
+  font-size: var(--text-sm);
+  color: var(--accent-secondary);
+  font-style: italic;
+}
+
+.preorder-ship-date {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: var(--text-xs);
+  color: var(--text-muted);
+  background: var(--bg-hover);
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-md);
+  width: fit-content;
+}
+
+.preorder-note {
+  font-size: var(--text-xs);
+  color: var(--text-muted);
+  line-height: 1.5;
+  font-style: italic;
+}
+
+/* ── Pricing ── */
+.preorder-pricing {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-3);
+  background: var(--bg-tertiary);
+  border-radius: var(--radius-md);
+  padding: var(--space-3);
+}
+
+.preorder-full-price,
+.preorder-half-price {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.preorder-full-price { border-right: 1px solid var(--border-primary); }
+
+.preorder-pricing .price {
+  font-size: var(--text-lg);
+  font-weight: var(--font-bold);
+  color: var(--text-primary);
+}
+
+/* ── Payment pills ── */
+.preorder-payment-pills {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  flex-wrap: wrap;
+}
+
+.payment-pill {
+  font-size: 11px;
+  font-weight: var(--font-semibold);
+  padding: 4px 12px;
+  border-radius: var(--radius-full);
+}
+
+.pill-half {
+  background: rgba(245,166,35,0.12);
+  border: 1px solid rgba(245,166,35,0.3);
+  color: var(--accent-secondary);
+}
+
+.pill-full {
+  background: rgba(76,175,80,0.12);
+  border: 1px solid rgba(76,175,80,0.3);
+  color: var(--accent-green);
+}
+
+.payment-pill-divider {
+  font-size: var(--text-xs);
+  color: var(--text-muted);
+}
+
+/* ── Responsive ── */
+@media (max-width: 768px) {
+  .preorder-header { flex-direction: column; }
+  .preorder-header-text h1 { font-size: var(--text-2xl); }
+  .preorder-grid { grid-template-columns: repeat(2, 1fr); gap: var(--space-4); }
+}
+
+@media (max-width: 480px) {
+  .preorder-grid { grid-template-columns: 1fr; }
+}

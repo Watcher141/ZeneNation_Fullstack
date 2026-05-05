@@ -1,0 +1,39 @@
+# =============================================================================
+#  DEV PROFILE — Overrides for local development
+#  Activated when: spring.profiles.active=dev
+#  Safe to commit — no real secrets here, all are local dev values
+# =============================================================================
+
+spring:
+  # Show SQL queries in console during development
+  jpa:
+    show-sql: true
+    properties:
+      hibernate:
+        format_sql: true
+
+  # In dev, you can use create-drop to auto-recreate schema
+  # Switch back to 'validate' once you start using Flyway migrations
+  # jpa:
+  #   hibernate:
+  #     ddl-auto: create-drop
+
+# Swagger fully open in dev — no auth needed to access docs
+springdoc:
+  swagger-ui:
+    csrf:
+      enabled: false
+
+# More verbose logging in dev
+logging:
+  level:
+    com.zenenation.backend: DEBUG
+    org.springframework.security: DEBUG
+    org.hibernate.SQL: DEBUG
+    org.hibernate.type.descriptor.sql.BasicBinder: TRACE   # Shows SQL param values
+
+# Dev-only: show full health details without auth
+management:
+  endpoint:
+    health:
+      show-details: always

@@ -1,0 +1,29 @@
+/* src/components/product/StarRating.css */
+
+.star-rating {
+  display: inline-flex;
+  align-items: center;
+  gap: 1px;
+}
+
+.star-rating.interactive .star {
+  cursor: pointer;
+  transition: transform var(--transition-fast);
+}
+
+.star-rating.interactive .star:hover {
+  transform: scale(1.2);
+}
+
+.star {
+  display: inline-flex;
+  align-items: center;
+  line-height: 1;
+}
+
+.star-number {
+  margin-left: var(--space-2);
+  font-size: var(--text-sm);
+  font-weight: var(--font-semibold);
+  color: var(--accent-secondary);
+}

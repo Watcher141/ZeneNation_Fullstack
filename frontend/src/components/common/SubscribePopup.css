@@ -1,0 +1,119 @@
+/* src/components/common/SubscribePopup.css */
+
+.subscribe-overlay {
+  position: fixed;
+  inset: 0;
+  background: var(--bg-overlay);
+  z-index: 1100;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-4);
+  animation: fadeIn 0.3s ease;
+}
+
+.subscribe-popup {
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-primary);
+  border-radius: var(--radius-xl);
+  padding: var(--space-8);
+  width: 100%;
+  max-width: 440px;
+  position: relative;
+  box-shadow: var(--shadow-lg);
+  animation: scaleIn 0.3s ease;
+}
+
+@keyframes scaleIn {
+  from { transform: scale(0.9); opacity: 0; }
+  to   { transform: scale(1);   opacity: 1; }
+}
+
+.subscribe-close {
+  position: absolute;
+  top: var(--space-4);
+  right: var(--space-4);
+  background: var(--bg-hover);
+  border: none;
+  color: var(--text-muted);
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all var(--transition-fast);
+}
+.subscribe-close:hover { background: var(--accent-primary-10); color: var(--accent-primary); }
+
+.subscribe-header {
+  text-align: center;
+  margin-bottom: var(--space-5);
+}
+
+.subscribe-icon {
+  margin-bottom: var(--space-3);
+}
+
+.subscribe-header h2 {
+  font-size: var(--text-2xl);
+  margin-bottom: var(--space-2);
+}
+
+.subscribe-header p {
+  color: var(--text-muted);
+  font-size: var(--text-sm);
+}
+
+.subscribe-perks {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  margin-bottom: var(--space-5);
+  background: var(--bg-tertiary);
+  border-radius: var(--radius-md);
+  padding: var(--space-4);
+}
+
+.subscribe-perk {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  font-size: var(--text-sm);
+  color: var(--text-secondary);
+}
+
+.subscribe-form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.subscribe-skip {
+  display: block;
+  width: 100%;
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  font-size: var(--text-xs);
+  text-align: center;
+  cursor: pointer;
+  margin-top: var(--space-3);
+  padding: var(--space-2);
+  transition: color var(--transition-fast);
+  text-decoration: underline;
+}
+.subscribe-skip:hover { color: var(--text-secondary); }
+
+.subscribe-success {
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-4);
+}
+
+.subscribe-success-icon { font-size: 4rem; }
+.subscribe-success h3 { font-size: var(--text-xl); }
+.subscribe-success p { color: var(--text-muted); font-size: var(--text-sm); }
