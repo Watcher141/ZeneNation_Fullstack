@@ -46,7 +46,16 @@ api.interceptors.response.use(
         localStorage.removeItem('accessToken');
         localStorage.removeItem('refreshToken');
         localStorage.removeItem('user');
-        window.location.href = '/login';
+        // Only redirect to login if user was previously logged in
+        // Don't redirect public page visitors who simply aren't logged in
+        if (window.location.pathname !== '/login' &&
+            window.location.pathname !== '/' &&
+            window.location.pathname !== '/home' &&
+            window.location.pathname !== '/products' &&
+            window.location.pathname !== '/preorder' &&
+            !window.location.pathname.startsWith('/products/')) {
+          window.location.href = '/login';
+        }
       }
     }
 
