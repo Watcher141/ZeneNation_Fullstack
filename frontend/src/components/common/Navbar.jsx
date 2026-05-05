@@ -13,6 +13,7 @@ import {
   MdInventory2,
   MdDashboard,
   MdShoppingBag,
+  MdRocketLaunch,
 } from 'react-icons/md';
 import './Navbar.css';
 
@@ -229,4 +230,4 @@ const Navbar = () => {
   );
 };
 
-export default Navbar; 
+export default Navbar;
