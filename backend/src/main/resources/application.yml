@@ -218,7 +218,7 @@ app:
 
   admin:
     email:    ${ADMIN_EMAIL}
-    password: ${ADMIN_PASSWORD}
+    password: ${ADMIN_PASSWORD:changeme}
 
   pagination:
     default-page-size: 12
