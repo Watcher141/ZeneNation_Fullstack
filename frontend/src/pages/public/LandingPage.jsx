@@ -300,28 +300,44 @@
 //   );
 // }
 
+
 // src/pages/public/LandingPage.jsx
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useAuth } from '../../context/AuthContext';
 import './LandingPage.css';
 
 export default function LandingPage() {
   const navigate = useNavigate();
+  const { user, loading } = useAuth();
   const [loaded, setLoaded] = useState(false);
 
   useEffect(() => {
-    if (localStorage.getItem('zn_skip_landing') === '1') {
+    // Wait for auth to finish loading
+    if (loading) return;
+
+    // If already visited AND logged in → go home
+    // If already visited AND not logged in → show landing again
+    if (localStorage.getItem('zn_skip_landing') === '1' && user) {
       navigate('/home', { replace: true });
       return;
     }
+
+    // If already visited but not logged in — reset flag and show landing
+    if (localStorage.getItem('zn_skip_landing') === '1' && !user) {
+      localStorage.removeItem('zn_skip_landing');
+    }
+
     const t = setTimeout(() => setLoaded(true), 100);
     return () => clearTimeout(t);
-  }, [navigate]);
+  }, [navigate, user, loading]);
 
   const handleEnter = () => {
     localStorage.setItem('zn_skip_landing', '1');
     navigate('/home');
   };
+
+  if (loading) return null;
 
   return (
     <div className={`lp-root ${loaded ? 'lp-loaded' : ''}`}>
@@ -331,12 +347,10 @@ export default function LandingPage() {
         <div className="lp-left-bg" />
         <div className="lp-grid-overlay" />
 
-        {/* Floating orbs */}
         <div className="lp-orb lp-orb-1" />
         <div className="lp-orb lp-orb-2" />
         <div className="lp-orb lp-orb-3" />
 
-        {/* Center artwork */}
         <div className="lp-artwork">
           <div className="lp-ring lp-ring-outer" />
           <div className="lp-ring lp-ring-mid" />
@@ -351,13 +365,11 @@ export default function LandingPage() {
           <div className="lp-glow-burst" />
         </div>
 
-        {/* Floating tags */}
         <div className="lp-tag lp-tag-1">Figures</div>
         <div className="lp-tag lp-tag-2">Weapons</div>
         <div className="lp-tag lp-tag-3">Apparel</div>
         <div className="lp-tag lp-tag-4">Collectibles</div>
 
-        {/* Bottom strip */}
         <div className="lp-marquee-wrap">
           <div className="lp-marquee">
             {Array(6).fill('ZENENATION · ANIME · COLLECTIBLES · ').map((t, i) => (
@@ -371,29 +383,24 @@ export default function LandingPage() {
       <div className="lp-right">
         <div className="lp-right-inner">
 
-          {/* Logo */}
           <div className="lp-logo">
             <span className="lp-logo-z">Z</span>
             <span className="lp-logo-rest">ENENATION</span>
           </div>
 
-          {/* Eyebrow */}
-          <p className="lp-eyebrow">— Est. 2025 · India's Anime Store —</p>
+          <p className="lp-eyebrow">&#8212; Est. 2025 &middot; India&apos;s Anime Store &#8212;</p>
 
-          {/* Headline */}
           <h1 className="lp-headline">
             <span className="lp-headline-line">Where</span>
             <span className="lp-headline-line lp-headline-accent">Anime</span>
             <span className="lp-headline-line">Lives.</span>
           </h1>
 
-          {/* Description */}
           <p className="lp-desc">
-            Premium figures, katanas, apparel and collectibles — 
+            Premium figures, katanas, apparel and collectibles —
             curated for true fans. Every piece tells a story.
           </p>
 
-          {/* Stats */}
           <div className="lp-stats">
             <div className="lp-stat">
               <span className="lp-stat-num">500+</span>
@@ -411,7 +418,6 @@ export default function LandingPage() {
             </div>
           </div>
 
-          {/* CTA */}
           <div className="lp-cta-wrap">
             <button className="lp-cta-btn" onClick={handleEnter}>
               <span>Get Started</span>
@@ -424,7 +430,6 @@ export default function LandingPage() {
             </button>
           </div>
 
-          {/* Categories preview */}
           <div className="lp-categories">
             {['Naruto', 'One Piece', 'Demon Slayer', 'Attack on Titan', 'Jujutsu Kaisen'].map((cat, i) => (
               <span key={i} className="lp-cat-chip">{cat}</span>
@@ -433,7 +438,6 @@ export default function LandingPage() {
 
         </div>
 
-        {/* Corner decoration */}
         <div className="lp-corner-tl" />
         <div className="lp-corner-br" />
       </div>
