@@ -1,35 +1,55 @@
 package com.zenenation.backend.service.impl;
 
+import com.resend.Resend;
+import com.resend.core.exception.ResendException;
+import com.resend.services.emails.model.CreateEmailOptions;
 import com.zenenation.backend.service.EmailService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.mail.javamail.JavaMailSender;
-import org.springframework.mail.javamail.MimeMessageHelper;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 
-import jakarta.mail.internet.MimeMessage;
 import java.util.List;
 
+/**
+ * Sends emails via Resend HTTP API (primary).
+ * SMTP config is kept in application.yml for future use.
+ *
+ * Resend works on Render free tier — uses HTTPS (port 443).
+ * SMTP was blocked by Render on ports 587 and 465.
+ */
 @Service
-@RequiredArgsConstructor
 @Slf4j
-@SuppressWarnings("null")
 public class EmailServiceImpl implements EmailService {
 
-    private final JavaMailSender mailSender;
+    @Value("${resend.api-key:re_placeholder}")
+    private String resendApiKey;
 
-    /** Sender address — set MAIL_FROM env var, falls back to MAIL_USERNAME */
-    @Value("${spring.mail.from:${spring.mail.username:noreply@zenenation.com}}")
+    @Value("${resend.from:Zenenation <noreply@zenenation.com>}")
     private String fromEmail;
 
-    /** Frontend URL for email links — set FRONTEND_URL env var */
     @Value("${app.cors.allowed-origins[2]:http://localhost:5173}")
     private String frontendUrl;
 
-    @Value("${app.admin.email:admin@zenenation.com}")
-    private String adminEmail;
+    private Resend getResend() {
+        return new Resend(resendApiKey);
+    }
+
+    private void sendEmail(String to, String subject, String html) {
+        try {
+            CreateEmailOptions params = CreateEmailOptions.builder()
+                    .from(fromEmail)
+                    .to(to)
+                    .subject(subject)
+                    .html(html)
+                    .build();
+            getResend().emails().send(params);
+            log.info("Email sent via Resend to: {}", to);
+        } catch (ResendException e) {
+            log.error("Failed to send email via Resend to {}: {}", to, e.getMessage());
+        }
+    }
 
     // -------------------------------------------------------------------------
     // PASSWORD RESET EMAIL
@@ -38,18 +58,8 @@ public class EmailServiceImpl implements EmailService {
     @Override
     @Async
     public void sendPasswordResetEmail(String toEmail, String resetLink) {
-        try {
-            MimeMessage message = mailSender.createMimeMessage();
-            MimeMessageHelper helper = new MimeMessageHelper(message, true, "UTF-8");
-            helper.setFrom(String.valueOf(fromEmail));
-            helper.setTo(String.valueOf(toEmail));
-            helper.setSubject("Reset Your Password — Zenenation");
-            helper.setText(String.valueOf(buildPasswordResetEmailBody(resetLink)), true);
-            mailSender.send(message);
-            log.info("Password reset email sent to: {}", toEmail);
-        } catch (Exception e) {
-            log.error("Failed to send password reset email to {}: {}", toEmail, e.getMessage());
-        }
+        sendEmail(toEmail, "Reset Your Password — Zenenation",
+                buildPasswordResetEmailBody(resetLink));
     }
 
     // -------------------------------------------------------------------------
@@ -59,18 +69,8 @@ public class EmailServiceImpl implements EmailService {
     @Override
     @Async
     public void sendOrderConfirmationEmail(String toEmail, String orderNumber, String totalAmount) {
-        try {
-            MimeMessage message = mailSender.createMimeMessage();
-            MimeMessageHelper helper = new MimeMessageHelper(message, true, "UTF-8");
-            helper.setFrom(String.valueOf(fromEmail));
-            helper.setTo(String.valueOf(toEmail));
-            helper.setSubject("Order Confirmed — " + orderNumber);
-            helper.setText(String.valueOf(buildOrderConfirmationEmailBody(orderNumber, totalAmount)), true);
-            mailSender.send(message);
-            log.info("Order confirmation email sent to: {} for order: {}", toEmail, orderNumber);
-        } catch (Exception e) {
-            log.error("Failed to send order confirmation email to {}: {}", toEmail, e.getMessage());
-        }
+        sendEmail(toEmail, "Order Confirmed — " + orderNumber,
+                buildOrderConfirmationEmailBody(orderNumber, totalAmount));
     }
 
     // -------------------------------------------------------------------------
@@ -80,18 +80,8 @@ public class EmailServiceImpl implements EmailService {
     @Override
     @Async
     public void sendAbandonedCartEmail(String toEmail, String userName, int itemCount, double cartTotal) {
-        try {
-            MimeMessage message = mailSender.createMimeMessage();
-            MimeMessageHelper helper = new MimeMessageHelper(message, true, "UTF-8");
-            helper.setFrom(String.valueOf(fromEmail));
-            helper.setTo(String.valueOf(toEmail));
-            helper.setSubject("You left something behind! 🛒 — Zenenation");
-            helper.setText(String.valueOf(buildAbandonedCartBody(userName, itemCount, cartTotal)), true);
-            mailSender.send(message);
-            log.info("Abandoned cart email sent to: {}", toEmail);
-        } catch (Exception e) {
-            log.error("Failed to send abandoned cart email to {}: {}", toEmail, e.getMessage());
-        }
+        sendEmail(toEmail, "You left something behind! — Zenenation",
+                buildAbandonedCartBody(userName, itemCount, cartTotal));
     }
 
     // -------------------------------------------------------------------------
@@ -101,18 +91,8 @@ public class EmailServiceImpl implements EmailService {
     @Override
     @Async
     public void sendSubscriptionWelcomeEmail(String toEmail, String name) {
-        try {
-            MimeMessage message = mailSender.createMimeMessage();
-            MimeMessageHelper helper = new MimeMessageHelper(message, true, "UTF-8");
-            helper.setFrom(String.valueOf(fromEmail));
-            helper.setTo(String.valueOf(toEmail));
-            helper.setSubject("Welcome to Zenenation! 🎌");
-            helper.setText(String.valueOf(buildSubscriptionWelcomeBody(name)), true);
-            mailSender.send(message);
-            log.info("Subscription welcome email sent to: {}", toEmail);
-        } catch (Exception e) {
-            log.error("Failed to send subscription welcome email to {}: {}", toEmail, e.getMessage());
-        }
+        sendEmail(toEmail, "Welcome to Zenenation!",
+                buildSubscriptionWelcomeBody(name));
     }
 
     // -------------------------------------------------------------------------
@@ -134,18 +114,10 @@ public class EmailServiceImpl implements EmailService {
             case "SUCCESS" -> "✅";
             default        -> "📢";
         };
+        String html = buildAnnouncementBody(title, message, accentColor, emoji);
+        String subject = emoji + " " + title + " — Zenenation";
         for (String email : emails) {
-            try {
-                MimeMessage msg = mailSender.createMimeMessage();
-                MimeMessageHelper helper = new MimeMessageHelper(msg, true, "UTF-8");
-                helper.setFrom(String.valueOf(fromEmail));
-                helper.setTo(String.valueOf(email));
-                helper.setSubject(emoji + " " + title + " — Zenenation");
-                helper.setText(String.valueOf(buildAnnouncementBody(title, message, accentColor, emoji)), true);
-                mailSender.send(msg);
-            } catch (Exception e) {
-                log.error("Failed to send announcement email to {}: {}", email, e.getMessage());
-            }
+            sendEmail(email, subject, html);
         }
         log.info("Announcement email sent to {} subscribers", emails.size());
     }
@@ -157,18 +129,8 @@ public class EmailServiceImpl implements EmailService {
     @Override
     @Async
     public void sendWelcomeCouponEmail(String toEmail, String name, String couponCode, int expiryDays) {
-        try {
-            MimeMessage message = mailSender.createMimeMessage();
-            MimeMessageHelper helper = new MimeMessageHelper(message, true, "UTF-8");
-            helper.setFrom(String.valueOf(fromEmail));
-            helper.setTo(String.valueOf(toEmail));
-            helper.setSubject("🎁 Your Welcome Gift — " + couponCode + " | Zenenation");
-            helper.setText(String.valueOf(buildWelcomeCouponBody(name, couponCode, expiryDays)), true);
-            mailSender.send(message);
-            log.info("Welcome coupon email sent to: {} with code: {}", toEmail, couponCode);
-        } catch (Exception e) {
-            log.error("Failed to send welcome coupon email to {}: {}", toEmail, e.getMessage());
-        }
+        sendEmail(toEmail, "Your Welcome Gift — " + couponCode + " | Zenenation",
+                buildWelcomeCouponBody(name, couponCode, expiryDays));
     }
 
     // =========================================================================
@@ -177,54 +139,54 @@ public class EmailServiceImpl implements EmailService {
 
     private String buildPasswordResetEmailBody(String resetLink) {
         return """
-                <!DOCTYPE html><html><head><meta charset="UTF-8">
-                <style>
-                    body{font-family:Arial,sans-serif;background:#f4f4f4;margin:0;padding:0}
-                    .container{max-width:600px;margin:40px auto;background:white;border-radius:8px;overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,.1)}
-                    .header{background:#1a1a2e;color:white;padding:30px;text-align:center}
-                    .body{padding:40px 30px;color:#333}
-                    .body p{line-height:1.6;margin:0 0 16px}
-                    .btn{display:inline-block;background:#e94560;color:white;padding:14px 32px;border-radius:6px;text-decoration:none;font-weight:bold;font-size:16px;margin:20px 0}
-                    .footer{background:#f4f4f4;padding:20px;text-align:center;font-size:12px;color:#aaa}
-                </style></head><body>
-                <div class="container">
-                    <div class="header"><h1>Zenenation</h1></div>
-                    <div class="body">
-                        <p>Hi there,</p>
-                        <p>We received a request to reset your password. Click the button below:</p>
-                        <a href="%s" class="btn">Reset My Password</a>
-                        <p style="font-size:13px;color:#888">⏱ This link expires in <strong>15 minutes</strong>.</p>
-                        <p style="font-size:13px;color:#888">If you didn't request this, ignore this email.</p>
-                    </div>
-                    <div class="footer">&copy; 2025 Zenenation. All rights reserved.</div>
-                </div></body></html>
-                """.formatted(resetLink);
+            <!DOCTYPE html><html><head><meta charset="UTF-8">
+            <style>
+                body{font-family:Arial,sans-serif;background:#f4f4f4;margin:0;padding:0}
+                .container{max-width:600px;margin:40px auto;background:white;border-radius:8px;overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,.1)}
+                .header{background:#1a1a2e;color:white;padding:30px;text-align:center}
+                .body{padding:40px 30px;color:#333}
+                .body p{line-height:1.6;margin:0 0 16px}
+                .btn{display:inline-block;background:#e94560;color:white;padding:14px 32px;border-radius:6px;text-decoration:none;font-weight:bold;font-size:16px;margin:20px 0}
+                .footer{background:#f4f4f4;padding:20px;text-align:center;font-size:12px;color:#aaa}
+            </style></head><body>
+            <div class="container">
+                <div class="header"><h1>Zenenation</h1></div>
+                <div class="body">
+                    <p>Hi there,</p>
+                    <p>We received a request to reset your password. Click the button below:</p>
+                    <a href="%s" class="btn">Reset My Password</a>
+                    <p style="font-size:13px;color:#888">This link expires in <strong>15 minutes</strong>.</p>
+                    <p style="font-size:13px;color:#888">If you didn't request this, ignore this email.</p>
+                </div>
+                <div class="footer">&copy; 2025 Zenenation. All rights reserved.</div>
+            </div></body></html>
+            """.formatted(resetLink);
     }
 
     private String buildOrderConfirmationEmailBody(String orderNumber, String totalAmount) {
         return """
-                <!DOCTYPE html><html><head><meta charset="UTF-8">
-                <style>
-                    body{font-family:Arial,sans-serif;background:#f4f4f4;margin:0;padding:0}
-                    .container{max-width:600px;margin:40px auto;background:white;border-radius:8px;overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,.1)}
-                    .header{background:#1a1a2e;color:white;padding:30px;text-align:center}
-                    .body{padding:40px 30px;color:#333}
-                    .order-box{background:#f9f9f9;border:1px solid #eee;border-radius:6px;padding:20px;margin:20px 0}
-                    .footer{background:#f4f4f4;padding:20px;text-align:center;font-size:12px;color:#aaa}
-                </style></head><body>
-                <div class="container">
-                    <div class="header"><h1>Order Confirmed! 🎉</h1></div>
-                    <div class="body">
-                        <p>Thank you for your order!</p>
-                        <div class="order-box">
-                            <p><strong>Order Number:</strong> %s</p>
-                            <p><strong>Total Amount:</strong> ₹%s</p>
-                        </div>
-                        <p>We'll notify you once your order is shipped.</p>
+            <!DOCTYPE html><html><head><meta charset="UTF-8">
+            <style>
+                body{font-family:Arial,sans-serif;background:#f4f4f4;margin:0;padding:0}
+                .container{max-width:600px;margin:40px auto;background:white;border-radius:8px;overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,.1)}
+                .header{background:#1a1a2e;color:white;padding:30px;text-align:center}
+                .body{padding:40px 30px;color:#333}
+                .order-box{background:#f9f9f9;border:1px solid #eee;border-radius:6px;padding:20px;margin:20px 0}
+                .footer{background:#f4f4f4;padding:20px;text-align:center;font-size:12px;color:#aaa}
+            </style></head><body>
+            <div class="container">
+                <div class="header"><h1>Order Confirmed!</h1></div>
+                <div class="body">
+                    <p>Thank you for your order!</p>
+                    <div class="order-box">
+                        <p><strong>Order Number:</strong> %s</p>
+                        <p><strong>Total Amount:</strong> Rs.%s</p>
                     </div>
-                    <div class="footer">&copy; 2025 Zenenation. All rights reserved.</div>
-                </div></body></html>
-                """.formatted(orderNumber, totalAmount);
+                    <p>We'll notify you once your order is shipped.</p>
+                </div>
+                <div class="footer">&copy; 2025 Zenenation. All rights reserved.</div>
+            </div></body></html>
+            """.formatted(orderNumber, totalAmount);
     }
 
     private String buildAbandonedCartBody(String userName, int itemCount, double cartTotal) {
@@ -240,10 +202,10 @@ public class EmailServiceImpl implements EmailService {
                 .footer{background:#f4f4f4;padding:20px;text-align:center;font-size:12px;color:#aaa}
             </style></head><body>
             <div class="container">
-                <div class="header"><h1>🛒 Your cart misses you!</h1></div>
+                <div class="header"><h1>Your cart misses you!</h1></div>
                 <div class="body">
                     <p>Hi %s,</p>
-                    <p>You left <strong>%d item(s)</strong> worth <strong>₹%.2f</strong> in your cart!</p>
+                    <p>You left <strong>%d item(s)</strong> worth <strong>Rs.%.2f</strong> in your cart!</p>
                     <a href="%s" class="btn">Complete My Order</a>
                 </div>
                 <div class="footer">&copy; 2025 Zenenation. All rights reserved.</div>
@@ -265,7 +227,7 @@ public class EmailServiceImpl implements EmailService {
                 .footer{background:#f4f4f4;padding:20px;text-align:center;font-size:12px;color:#aaa}
             </style></head><body>
             <div class="container">
-                <div class="header"><h1>Welcome to Zenenation! 🎌</h1></div>
+                <div class="header"><h1>Welcome to Zenenation!</h1></div>
                 <div class="body">
                     <p>Hi %s,</p>
                     <p>You're now subscribed! Here's what you'll receive:</p>
@@ -281,7 +243,6 @@ public class EmailServiceImpl implements EmailService {
     }
 
     private String buildAnnouncementBody(String title, String message, String accentColor, String emoji) {
-        String siteUrl = frontendUrl;
         return """
             <!DOCTYPE html><html><head><meta charset="UTF-8">
             <style>
@@ -303,7 +264,7 @@ public class EmailServiceImpl implements EmailService {
                 </div>
                 <div class="footer">&copy; 2025 Zenenation. All rights reserved.</div>
             </div></body></html>
-            """.formatted(accentColor, accentColor, accentColor, emoji, title, message, siteUrl);
+            """.formatted(accentColor, accentColor, accentColor, emoji, title, message, frontendUrl);
     }
 
     private String buildWelcomeCouponBody(String name, String couponCode, int expiryDays) {
@@ -328,14 +289,14 @@ public class EmailServiceImpl implements EmailService {
                 </div>
                 <div class="body">
                     <p>Hi <strong>%s</strong>,</p>
-                    <p>Here's an exclusive <strong>5%%%% off</strong> coupon for your first order:</p>
+                    <p>Here's an exclusive <strong>5%% off</strong> coupon for your first order:</p>
                     <div class="coupon-box">
                         <div style="color:#aaa;font-size:13px;letter-spacing:2px;margin-bottom:8px">YOUR COUPON CODE</div>
                         <div class="coupon-code">%s</div>
-                        <div style="color:#e94560;font-size:18px;font-weight:bold;margin-top:8px">5%%%% OFF (up to ₹200)</div>
-                        <div style="color:#888;font-size:12px;margin-top:8px">⏰ Valid for %d days · One-time use only</div>
+                        <div style="color:#e94560;font-size:18px;font-weight:bold;margin-top:8px">5%% OFF (up to Rs.200)</div>
+                        <div style="color:#888;font-size:12px;margin-top:8px">Valid for %d days · One-time use only</div>
                     </div>
-                    <a href="%s" class="btn">Shop Now →</a>
+                    <a href="%s" class="btn">Shop Now</a>
                 </div>
                 <div class="footer">&copy; 2025 Zenenation. All rights reserved.</div>
             </div></body></html>
