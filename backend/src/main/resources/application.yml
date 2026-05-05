@@ -96,7 +96,7 @@ spring:
   # ---------------------------------------------------------------------------
   mail:
     host:     ${MAIL_HOST:smtp-relay.brevo.com}
-    port:     ${MAIL_PORT:587}
+    port:     ${MAIL_PORT:465}
     username: ${MAIL_USERNAME:your-email@gmail.com}
     password: ${MAIL_PASSWORD:your-brevo-smtp-key}
     from:     ${MAIL_FROM:zenenationstore@gmail.com}
