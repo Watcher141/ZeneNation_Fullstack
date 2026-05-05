@@ -1,49 +1,32 @@
 # =============================================================================
-#  PROD PROFILE — Overrides for production deployment
-#  Activated when: spring.profiles.active=prod
-#
-#  ALL secrets must come from environment variables — never hardcode here.
-#  On Railway / Render / AWS: set these as environment variables in dashboard.
-#
-#  Required environment variables for production:
-#    DB_URL, DB_USERNAME, DB_PASSWORD
-#    JWT_SECRET, JWT_ACCESS_EXPIRATION, JWT_REFRESH_EXPIRATION
-#    GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET
-#    CLOUDINARY_CLOUD_NAME, CLOUDINARY_API_KEY, CLOUDINARY_API_SECRET
-#    RAZORPAY_KEY_ID, RAZORPAY_KEY_SECRET, RAZORPAY_WEBHOOK_SECRET
-#    MAIL_USERNAME, MAIL_PASSWORD
-#    ADMIN_EMAIL, ADMIN_PASSWORD
-#    FRONTEND_URL, OAUTH2_REDIRECT_URI
+#  PROD PROFILE — Overrides for production (Render + Neon)
 # =============================================================================
 
 spring:
   jpa:
-    show-sql: false                  # Never log SQL in production
+    show-sql: false
     hibernate:
-      ddl-auto: validate             # Flyway manages schema, Hibernate only validates
+      ddl-auto: validate
 
-  # Connection pool tuned for production load
+  # Neon free tier supports max 5 connections
   datasource:
     hikari:
-      minimum-idle: 10
-      maximum-pool-size: 50
+      minimum-idle:       2
+      maximum-pool-size:  5
 
-# Restrict Swagger in production — disable or put behind auth
 springdoc:
   swagger-ui:
-    enabled: false                   # Disable Swagger UI in production
+    enabled: false
   api-docs:
-    enabled: false                   # Disable OpenAPI JSON endpoint too
+    enabled: false
 
-# Minimal logging in production — only warnings and errors
 logging:
   level:
-    root: WARN
-    com.zenenation.backend: INFO
+    root:                    WARN
+    com.zenenation.backend:  INFO
     org.springframework.security: WARN
-    org.hibernate.SQL: WARN
+    org.hibernate.SQL:       WARN
 
-# Only expose health endpoint in production (not metrics/info publicly)
 management:
   endpoints:
     web:
@@ -51,8 +34,10 @@ management:
         include: health
   endpoint:
     health:
-      show-details: when-authorized
+      show-details: always
+  health:
+    mail:
+      enabled: false
 
 server:
-  # Trust proxy headers (needed when behind Nginx / load balancer)
   forward-headers-strategy: framework
