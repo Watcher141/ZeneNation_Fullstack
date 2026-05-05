@@ -16,7 +16,7 @@ export const AdminRoute = ({ children }) => {
   const { user, loading, isAdmin } = useAuth();
   if (loading) return <Loader fullPage />;
   if (!user) return <Navigate to="/login" replace />;
-  if (!isAdmin()) return <Navigate to="/" replace />;
+  if (!isAdmin()) return <Navigate to="/home" replace />;
   return children;
 };
 
@@ -24,6 +24,6 @@ export const AdminRoute = ({ children }) => {
 export const GuestRoute = ({ children }) => {
   const { user, loading } = useAuth();
   if (loading) return <Loader fullPage />;
-  if (user) return <Navigate to="/" replace />;
+  if (user) return <Navigate to="/home" replace />;
   return children;
 };
