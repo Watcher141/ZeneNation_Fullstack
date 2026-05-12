@@ -54,8 +54,8 @@ const HomePage = () => {
 
   return (
     <div className="home-page">
-      {/* Hero */}
-      <section className="hero">
+      Hero
+      {/* <section className="hero">
         <div className="container hero-inner">
           <div className="hero-content">
             <div className="hero-badge">🎌 Anime Merchandise</div>
@@ -79,6 +79,54 @@ const HomePage = () => {
           <div className="hero-visual">
             <div className="hero-orb" />
             <span className="hero-emoji">⚔️</span>
+          </div>
+        </div>
+      </section> */}
+
+            {/* Featured Banner Carousel */}
+      <section className="featured-carousel-section">
+        <div className="container">
+          <div className="featured-carousel">
+
+            <div className="featured-carousel-overlay" />
+
+            <img
+              src="https://images.unsplash.com/photo-1578632767115-351597cf2477?q=80&w=1600&auto=format&fit=crop"
+              alt="Anime Banner"
+              className="featured-carousel-image"
+            />
+
+            <div className="featured-carousel-content">
+              <div className="featured-carousel-badge">
+                ⚔️ Featured Collection
+              </div>
+
+              <h2 className="featured-carousel-title">
+                Legendary <span>Anime Weapons</span>
+              </h2>
+
+              <p className="featured-carousel-desc">
+                Explore premium LED katanas, collector swords,
+                anime replicas and exclusive collectibles.
+              </p>
+
+              <div className="featured-carousel-actions">
+                <Link
+                  to="/search?keyword=katana"
+                  className="btn btn-primary btn-lg"
+                >
+                  Explore Collection
+                </Link>
+
+                <Link
+                  to="/products"
+                  className="btn btn-secondary btn-lg"
+                >
+                  View Products
+                </Link>
+              </div>
+            </div>
+
           </div>
         </div>
       </section>
