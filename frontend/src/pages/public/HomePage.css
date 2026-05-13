@@ -90,7 +90,7 @@
 /* ───────────────── FEATURED CAROUSEL ───────────────── */
 
 .featured-carousel-section {
-  padding: var(--space-10) 0;
+  padding: var(--space-20) 0;
   background:
     linear-gradient(
       180deg,
