@@ -325,6 +325,33 @@ public class ProductServiceImpl implements ProductService {
     }
 
     // -------------------------------------------------------------------------
+    // ADMIN — REPLACE IMAGE
+    // -------------------------------------------------------------------------
+
+    @Override
+    @Transactional
+    @CacheEvict(value = CacheConfig.CACHE_PRODUCT, allEntries = true)
+    public void replaceProductImage(Long productId, Long imageId, MultipartFile image) {
+        ProductImage existing = productImageRepository.findById(imageId)
+                .orElseThrow(() -> new ResourceNotFoundException("ProductImage", "id", imageId));
+
+        if (!existing.getProduct().getId().equals(productId)) {
+            throw new BadRequestException("Image does not belong to product: " + productId);
+        }
+
+        // Replace on Cloudinary — deletes old, uploads new
+        Map<String, String> uploadResult = cloudinaryService.replaceImage(
+                existing.getImagePublicId(), image, productsFolder
+        );
+
+        existing.setImageUrl(uploadResult.get("url"));
+        existing.setImagePublicId(uploadResult.get("publicId"));
+        productImageRepository.save(existing);
+
+        log.info("Product image replaced: imageId={}, productId={}", imageId, productId);
+    }
+
+    // -------------------------------------------------------------------------
     // ADMIN — DELETE / TOGGLE
     // -------------------------------------------------------------------------
 

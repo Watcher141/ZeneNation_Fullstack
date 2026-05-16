@@ -218,6 +218,21 @@ public class ProductController {
     }
 
     /**
+     * PUT /api/v1/products/{productId}/images/{imageId}/replace
+     * Replace a specific product image with a new one.
+     */
+    @PutMapping("/{productId}/images/{imageId}/replace")
+    @PreAuthorize("hasRole('ADMIN')")
+    @Operation(summary = "Admin: replace a specific product image")
+    public ResponseEntity<ApiResponse<Void>> replaceImage(
+            @PathVariable Long productId,
+            @PathVariable Long imageId,
+            @RequestParam("image") MultipartFile image) {
+        productService.replaceProductImage(productId, imageId, image);
+        return ResponseEntity.ok(ApiResponse.success("Image replaced successfully", null));
+    }
+
+    /**
      * PATCH /api/v1/products/{productId}/images/{imageId}/primary
      * Set a specific image as the primary thumbnail.
      */

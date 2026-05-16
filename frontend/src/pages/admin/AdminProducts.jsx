@@ -1,6 +1,7 @@
 // src/pages/admin/AdminProducts.jsx
 import { useState, useEffect, useCallback } from 'react';
 import AdminLayout from '../../components/admin/AdminLayout';
+import ImageUploader from '../../components/admin/ImageUploader';
 import Loader from '../../components/common/Loader';
 import { productApi } from '../../api/productApi';
 import { categoryApi } from '../../api/categoryApi';
@@ -8,13 +9,14 @@ import toast from 'react-hot-toast';
 
 const emptyForm = {
   name: '', description: '', tagline: '', price: '', discountPercent: '0',
-  stockQuantity: '', categoryId: '', isActive: true,
+  stockQuantity: '', categoryId: '', subcategoryId: '', isActive: true,
   isPreorder: false, estimatedShipDate: '', preorderNote: '',
 };
 
 const AdminProducts = () => {
   const [products, setProducts] = useState([]);
   const [categories, setCategories] = useState([]);
+  const [subcategories, setSubcategories] = useState([]);
   const [pagination, setPagination] = useState({});
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
@@ -22,8 +24,7 @@ const AdminProducts = () => {
   const [form, setForm] = useState(emptyForm);
   const [saving, setSaving] = useState(false);
   const [page, setPage] = useState(0);
-  const [imageFiles, setImageFiles] = useState([]);
-  const [uploadingId, setUploadingId] = useState(null);
+  const [imageModal, setImageModal] = useState(null); // { id, images, name }
 
   const fetchProducts = useCallback(async () => {
     setLoading(true);
@@ -47,7 +48,7 @@ const AdminProducts = () => {
     setForm({
       name: p.name, description: p.description, tagline: p.tagline || '', price: p.price,
       discountPercent: p.discountPercent || '0', stockQuantity: p.stockQuantity,
-      categoryId: p.category?.id || '', isActive: p.isActive,
+      categoryId: p.category?.parentId || p.category?.id || '', subcategoryId: p.category?.parentId ? p.category?.id || '' : '', isActive: p.isActive,
       isPreorder: p.isPreorder || false,
       estimatedShipDate: p.estimatedShipDate || '',
       preorderNote: p.preorderNote || '',
@@ -65,7 +66,7 @@ const AdminProducts = () => {
         price: Number(form.price),
         discountPercent: Number(form.discountPercent),
         stockQuantity: Number(form.stockQuantity),
-        categoryId: Number(form.categoryId),
+        categoryId: Number(form.subcategoryId || form.categoryId),
       };
       if (editing) {
         await productApi.update(editing.id, payload);
@@ -98,19 +99,8 @@ const AdminProducts = () => {
     } catch { toast.error('Failed to update'); }
   };
 
-  const handleImageUpload = async (productId) => {
-    if (!imageFiles.length) { toast.error('Select images first'); return; }
-    setUploadingId(productId);
-    try {
-      const formData = new FormData();
-      imageFiles.forEach(f => formData.append('images', f));
-      await productApi.uploadImages(productId, formData);
-      toast.success('Images uploaded!');
-      setImageFiles([]);
-      fetchProducts();
-    } catch { toast.error('Image upload failed'); }
-    finally { setUploadingId(null); }
-  };
+  const openImageModal = (p) => setImageModal({ id: p.id, images: p.images || [], name: p.name });
+  const closeImageModal = () => { setImageModal(null); fetchProducts(); };
 
   if (loading) return <AdminLayout><Loader fullPage /></AdminLayout>;
 
@@ -161,14 +151,9 @@ const AdminProducts = () => {
                   </span>
                 </td>
                 <td>
-                  <div style={{ display: 'flex', gap: 4, flexDirection: 'column' }}>
-                    <input type="file" accept="image/*" multiple style={{ fontSize: 11, maxWidth: 130 }}
-                      onChange={e => setImageFiles(Array.from(e.target.files))} />
-                    <button className="btn btn-ghost btn-sm" onClick={() => handleImageUpload(p.id)}
-                      disabled={uploadingId === p.id}>
-                      {uploadingId === p.id ? 'Uploading...' : '↑ Upload'}
-                    </button>
-                  </div>
+                  <button className="btn btn-ghost btn-sm" onClick={() => openImageModal(p)}>
+                    🖼 Images {p.images?.length ? `(${p.images.length})` : ''}
+                  </button>
                 </td>
                 <td>
                   <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
@@ -241,10 +226,26 @@ const AdminProducts = () => {
                   <div className="form-group">
                     <label className="form-label">Category *</label>
                     <select className="form-select" value={form.categoryId}
-                      onChange={e => setForm({ ...form, categoryId: e.target.value })} required>
+                      onChange={e => {
+                        const cat = categories.find(c => c.id == e.target.value);
+                        setSubcategories(cat?.subcategories || []);
+                        setForm({ ...form, categoryId: e.target.value, subcategoryId: '' });
+                      }} required>
                       <option value="">Select category</option>
                       {categories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
                     </select>
+                  </div>
+                  {subcategories.length > 0 && (
+                    <div className="form-group">
+                      <label className="form-label">Subcategory <span className="text-muted" style={{fontWeight:400,fontSize:12}}>(optional)</span></label>
+                      <select className="form-select" value={form.subcategoryId || ''}
+                        onChange={e => setForm({ ...form, subcategoryId: e.target.value, categoryId: e.target.value || form.categoryId })}>
+                        <option value="">— Use parent category —</option>
+                        {subcategories.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
+                      </select>
+                    </div>
+                  )}
+                  <div className="form-group" style={{display:'none'}}>
                   </div>
                 </div>
                 <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer' }}>
@@ -284,6 +285,29 @@ const AdminProducts = () => {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+      {/* Image Management Modal */}
+      {imageModal && (
+        <div className="modal-overlay" onClick={closeImageModal}>
+          <div className="modal" style={{ maxWidth: 680, width: '95%' }} onClick={e => e.stopPropagation()}>
+            <div className="modal-header">
+              <h2>Images — {imageModal.name}</h2>
+              <button className="modal-close" onClick={closeImageModal}>✕</button>
+            </div>
+            <div className="modal-body">
+              <ImageUploader
+                productId={imageModal.id}
+                existingImages={imageModal.images}
+                onImagesChange={() => {
+                  productApi.getById(imageModal.id).then(res => {
+                    setImageModal(prev => ({ ...prev, images: res.data.data?.images || [] }));
+                    fetchProducts();
+                  }).catch(() => {});
+                }}
+              />
+            </div>
           </div>
         </div>
       )}

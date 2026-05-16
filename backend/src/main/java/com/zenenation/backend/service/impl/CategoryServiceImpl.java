@@ -4,6 +4,7 @@ import com.zenenation.backend.config.CacheConfig;
 import com.zenenation.backend.dto.request.CategoryRequest;
 import com.zenenation.backend.dto.response.CategoryResponse;
 import com.zenenation.backend.entity.Category;
+import com.zenenation.backend.exception.BadRequestException;
 import com.zenenation.backend.exception.DuplicateResourceException;
 import com.zenenation.backend.exception.ResourceNotFoundException;
 import com.zenenation.backend.repository.CategoryRepository;
@@ -38,28 +39,24 @@ public class CategoryServiceImpl implements CategoryService {
     // PUBLIC
     // -------------------------------------------------------------------------
 
-    /**
-     * Returns all active categories.
-     * @Cacheable — result is cached after first call.
-     * Cache is evicted whenever admin creates, updates, or deletes a category.
-     */
     @Override
+    @Transactional(readOnly = true)
     @Cacheable(value = CacheConfig.CACHE_CATEGORIES)
     public List<CategoryResponse> getAllCategories() {
-        log.debug("Fetching all active categories from DB");
-        return categoryRepository.findByIsDeletedFalse()
+        // Return only top-level categories with their subcategories nested
+        return categoryRepository.findByParentIsNullAndIsDeletedFalse()
                 .stream()
-                .map(this::toResponse)
+                .map(this::toResponseWithSubcategories)
                 .collect(Collectors.toList());
     }
 
     @Override
+    @Transactional(readOnly = true)
     @Cacheable(value = CacheConfig.CACHE_CATEGORY, key = "#id")
     public CategoryResponse getCategoryById(Long id) {
-        log.debug("Fetching category by id: {}", id);
         Category category = categoryRepository.findByIdAndIsDeletedFalse(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Category", "id", id));
-        return toResponse(category);
+        return toResponseWithSubcategories(category);
     }
 
     // -------------------------------------------------------------------------
@@ -75,22 +72,29 @@ public class CategoryServiceImpl implements CategoryService {
     public CategoryResponse createCategory(CategoryRequest request) {
         String name = request.getName().trim();
 
-        // Prevent duplicate category names (case-insensitive)
         if (categoryRepository.existsByNameIgnoreCase(name)) {
-            throw new DuplicateResourceException(
-                    "Category already exists with name: " + name
-            );
+            throw new DuplicateResourceException("Category already exists with name: " + name);
         }
 
-        Category category = Category.builder()
+        Category.CategoryBuilder builder = Category.builder()
                 .name(name)
-                .description(request.getDescription())
-                .build();
+                .description(request.getDescription());
 
-        category = categoryRepository.save(category);
-        log.info("Category created: id={}, name={}", category.getId(), category.getName());
+        // Set parent if parentId provided
+        if (request.getParentId() != null) {
+            Category parent = categoryRepository.findById(request.getParentId())
+                    .orElseThrow(() -> new ResourceNotFoundException("Parent category", "id", request.getParentId()));
+            // Prevent creating subcategory of a subcategory (max 2 levels)
+            if (parent.getParent() != null) {
+                throw new BadRequestException("Cannot create a subcategory of a subcategory. Max 2 levels allowed.");
+            }
+            builder.parent(parent);
+        }
 
-        return toResponse(category);
+        Category category = categoryRepository.save(builder.build());
+        log.info("Category created: id={}, name={}, parentId={}", category.getId(), category.getName(), request.getParentId());
+
+        return toResponseWithSubcategories(category);
     }
 
     // -------------------------------------------------------------------------
@@ -107,13 +111,10 @@ public class CategoryServiceImpl implements CategoryService {
         Category category = getCategoryEntityById(id);
         String newName = request.getName().trim();
 
-        // Check for duplicate name — but exclude current category from check
         categoryRepository.findByNameIgnoreCaseAndIsDeletedFalse(newName)
                 .ifPresent(existing -> {
                     if (!existing.getId().equals(id)) {
-                        throw new DuplicateResourceException(
-                                "Another category already exists with name: " + newName
-                        );
+                        throw new DuplicateResourceException("Another category already exists with name: " + newName);
                     }
                 });
 
@@ -122,10 +123,22 @@ public class CategoryServiceImpl implements CategoryService {
             category.setDescription(request.getDescription());
         }
 
+        // Update parent if provided
+        if (request.getParentId() != null) {
+            Category parent = categoryRepository.findById(request.getParentId())
+                    .orElseThrow(() -> new ResourceNotFoundException("Parent category", "id", request.getParentId()));
+            if (parent.getParent() != null) {
+                throw new BadRequestException("Cannot nest subcategory under another subcategory.");
+            }
+            category.setParent(parent);
+        } else {
+            category.setParent(null); // promote to top-level
+        }
+
         category = categoryRepository.save(category);
         log.info("Category updated: id={}, name={}", category.getId(), category.getName());
 
-        return toResponse(category);
+        return toResponseWithSubcategories(category);
     }
 
     // -------------------------------------------------------------------------
@@ -142,14 +155,9 @@ public class CategoryServiceImpl implements CategoryService {
         Category category = getCategoryEntityById(id);
 
         Map<String, String> uploadResult;
-
         if (category.getImagePublicId() != null) {
-            // Replace existing image
-            uploadResult = cloudinaryService.replaceImage(
-                    category.getImagePublicId(), image, categoriesFolder
-            );
+            uploadResult = cloudinaryService.replaceImage(category.getImagePublicId(), image, categoriesFolder);
         } else {
-            // Upload new image
             uploadResult = cloudinaryService.uploadImage(image, categoriesFolder);
         }
 
@@ -158,7 +166,7 @@ public class CategoryServiceImpl implements CategoryService {
         category = categoryRepository.save(category);
 
         log.info("Category image uploaded: categoryId={}", id);
-        return toResponse(category);
+        return toResponseWithSubcategories(category);
     }
 
     // -------------------------------------------------------------------------
@@ -173,24 +181,23 @@ public class CategoryServiceImpl implements CategoryService {
     })
     public void deleteCategory(Long id) {
         Category category = getCategoryEntityById(id);
-
-        // Soft delete — set isDeleted flag, keep data intact
         category.setIsDeleted(true);
+        // Also soft-delete all subcategories
+        category.getSubcategories().forEach(sub -> sub.setIsDeleted(true));
         categoryRepository.save(category);
-
         log.info("Category soft deleted: id={}, name={}", id, category.getName());
     }
 
     // -------------------------------------------------------------------------
-    // ADMIN — GET ALL (including deleted)
+    // ADMIN — GET ALL
     // -------------------------------------------------------------------------
 
     @Override
+    @Transactional(readOnly = true)
     public List<CategoryResponse> getAllCategoriesForAdmin() {
-        // findAll() — returns everything including soft-deleted categories
-        return categoryRepository.findAll()
+        return categoryRepository.findByParentIsNull()
                 .stream()
-                .map(this::toResponse)
+                .map(this::toResponseWithSubcategories)
                 .collect(Collectors.toList());
     }
 
@@ -198,19 +205,25 @@ public class CategoryServiceImpl implements CategoryService {
     // HELPERS
     // -------------------------------------------------------------------------
 
-    /**
-     * Fetch the raw Category entity — used internally by update/delete/image methods.
-     * Includes soft-deleted categories (admin may want to restore one — future feature).
-     */
     private Category getCategoryEntityById(Long id) {
         return categoryRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Category", "id", id));
     }
 
-    /**
-     * Map Category entity → CategoryResponse DTO.
-     * imagePublicId intentionally excluded — internal Cloudinary key.
-     */
+    /** Maps category with nested subcategories */
+    private CategoryResponse toResponseWithSubcategories(Category category) {
+        List<CategoryResponse> subcategories = category.getSubcategories() == null ? List.of() :
+                category.getSubcategories().stream()
+                        .filter(sub -> !sub.getIsDeleted())
+                        .map(this::toResponse)
+                        .collect(Collectors.toList());
+
+        CategoryResponse response = toResponse(category);
+        response.setSubcategories(subcategories);
+        return response;
+    }
+
+    /** Basic mapper — no nested subcategories */
     private CategoryResponse toResponse(Category category) {
         return CategoryResponse.builder()
                 .id(category.getId())
@@ -218,6 +231,9 @@ public class CategoryServiceImpl implements CategoryService {
                 .description(category.getDescription())
                 .imageUrl(category.getImageUrl())
                 .isDeleted(category.getIsDeleted())
+                .parentId(category.getParent() != null ? category.getParent().getId() : null)
+                .parentName(category.getParent() != null ? category.getParent().getName() : null)
+                .productCount(category.getProducts() != null ? category.getProducts().size() : 0)
                 .createdAt(category.getCreatedAt())
                 .updatedAt(category.getUpdatedAt())
                 .build();

@@ -4,11 +4,6 @@ import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
 import lombok.Data;
 
-/**
- * Used for both CREATE and UPDATE category.
- * Image is handled separately via a dedicated image upload API —
- * not part of this DTO (multipart upload is a separate endpoint).
- */
 @Data
 public class CategoryRequest {
 
@@ -18,4 +13,7 @@ public class CategoryRequest {
 
     @Size(max = 500, message = "Description cannot exceed 500 characters")
     private String description;
+
+    /** Optional — set to make this a subcategory. NULL = top-level category. */
+    private Long parentId;
 }

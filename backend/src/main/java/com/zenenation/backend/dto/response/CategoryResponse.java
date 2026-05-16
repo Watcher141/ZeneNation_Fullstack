@@ -6,6 +6,7 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 import java.time.LocalDateTime;
+import java.util.List;
 
 /**
  * Returned for both public and admin category endpoints.
@@ -22,7 +23,11 @@ public class CategoryResponse {
     private String name;
     private String description;
     private String imageUrl;
-    private Boolean isDeleted;      // Only relevant for admin view
+    private Boolean isDeleted;
+    private Long parentId;                    // null for top-level categories
+    private String parentName;               // name of parent category
+    private List<CategoryResponse> subcategories;  // populated for top-level
+    private Integer productCount;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
 }

@@ -67,6 +67,7 @@ public class SecurityConfig {
                     "/api-docs/**",   "/api-docs.yaml"
                 ).permitAll()
                 .requestMatchers("/actuator/**").permitAll()
+                .requestMatchers(HttpMethod.GET, "/api/v1/announcements/active").permitAll()
 
                 // ── ADMIN ─────────────────────────────────────────────────────
                 .requestMatchers("/api/v1/admin/**").hasRole("ADMIN")

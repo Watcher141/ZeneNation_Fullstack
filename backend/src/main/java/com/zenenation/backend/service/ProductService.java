@@ -48,6 +48,8 @@ public interface ProductService {
     /** Admin: set which image is the primary thumbnail */
     void setPrimaryImage(Long productId, Long imageId);
 
+    void replaceProductImage(Long productId, Long imageId, org.springframework.web.multipart.MultipartFile image);
+
     /** Admin: soft delete a product */
     void deleteProduct(Long id);
 

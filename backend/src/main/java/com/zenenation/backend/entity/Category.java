@@ -86,13 +86,30 @@ public class Category {
     private Boolean isDeleted = false;
 
     // ------------------------------------------------------------------
+    // SUBCATEGORY (self-referencing)
+    // ------------------------------------------------------------------
+
+    /**
+     * Parent category — NULL for top-level categories.
+     * Set for subcategories (e.g. "Naruto Figures" → parent = "Figures")
+     */
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "parent_id")
+    private Category parent;
+
+    /**
+     * Child subcategories — empty for leaf categories.
+     */
+    @OneToMany(mappedBy = "parent", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
+    @Builder.Default
+    private List<Category> subcategories = new ArrayList<>();
+
+    // ------------------------------------------------------------------
     // RELATIONSHIPS
     // ------------------------------------------------------------------
 
     /**
      * All products under this category.
-     * Loaded lazily — product list is only fetched when explicitly needed.
-     * mappedBy = "category" refers to the 'category' field in Product entity.
      */
     @OneToMany(mappedBy = "category", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
     @Builder.Default
