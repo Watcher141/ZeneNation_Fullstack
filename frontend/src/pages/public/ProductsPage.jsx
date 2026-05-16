@@ -45,37 +45,78 @@ const ProductsPage = () => {
     }
   };
 
+  // ── Fix: setParam does NOT reset page unless explicitly requested ──
   const setParam = (key, value) => {
     const p = new URLSearchParams(searchParams);
-    p.set(key, value);
-    p.set('page', '0');
+    p.set(key, String(value));
+    setSearchParams(p);
+  };
+
+  const setCategory = (catId) => {
+    const p = new URLSearchParams(searchParams);
+    if (catId) p.set('categoryId', catId);
+    else p.delete('categoryId');
+    p.set('page', '0'); // reset page when category changes
+    setSearchParams(p);
+  };
+
+  const setSort = (sb, sd) => {
+    const p = new URLSearchParams(searchParams);
+    p.set('sortBy', sb);
+    p.set('sortDir', sd);
+    p.set('page', '0'); // reset page when sort changes
+    setSearchParams(p);
+  };
+
+  const goToPage = (newPage) => {
+    const p = new URLSearchParams(searchParams);
+    p.set('page', String(newPage));
     setSearchParams(p);
   };
 
   return (
     <div className="page-wrapper">
       <div className="container products-page">
-        {/* Filters */}
+        {/* ── Sidebar ── */}
         <aside className="products-sidebar">
           <h3 className="sidebar-title">Categories</h3>
           <button
             className={`sidebar-cat-item ${!categoryId ? 'active' : ''}`}
-            onClick={() => { const p = new URLSearchParams(searchParams); p.delete('categoryId'); p.set('page','0'); setSearchParams(p); }}
+            onClick={() => setCategory(null)}
           >
             All Products
           </button>
           {categories.map(cat => (
-            <button
-              key={cat.id}
-              className={`sidebar-cat-item ${categoryId == cat.id ? 'active' : ''}`}
-              onClick={() => setParam('categoryId', cat.id)}
-            >
-              {cat.name}
-            </button>
+            <div key={cat.id}>
+              <button
+                className={`sidebar-cat-item ${categoryId == cat.id ? 'active' : ''}`}
+                onClick={() => setCategory(cat.id)}
+              >
+                {cat.name}
+                {cat.subcategories?.length > 0 && (
+                  <span style={{ fontSize: 11, color: 'var(--text-muted)', marginLeft: 6 }}>
+                    ({cat.subcategories.length})
+                  </span>
+                )}
+              </button>
+              {/* Show subcategories when parent or any sub is selected */}
+              {(categoryId == cat.id || cat.subcategories?.some(s => s.id == categoryId)) &&
+                cat.subcategories?.map(sub => (
+                  <button
+                    key={sub.id}
+                    className={`sidebar-cat-item ${categoryId == sub.id ? 'active' : ''}`}
+                    style={{ paddingLeft: 24, fontSize: 13 }}
+                    onClick={() => setCategory(sub.id)}
+                  >
+                    ↳ {sub.name}
+                  </button>
+                ))
+              }
+            </div>
           ))}
         </aside>
 
-        {/* Products */}
+        {/* ── Main ── */}
         <main className="products-main">
           <div className="products-toolbar">
             <p className="products-count">
@@ -86,9 +127,7 @@ const ProductsPage = () => {
               value={`${sortBy}-${sortDir}`}
               onChange={(e) => {
                 const [sb, sd] = e.target.value.split('-');
-                const p = new URLSearchParams(searchParams);
-                p.set('sortBy', sb); p.set('sortDir', sd); p.set('page', '0');
-                setSearchParams(p);
+                setSort(sb, sd);
               }}
             >
               <option value="createdAt-desc">Newest First</option>
@@ -104,13 +143,14 @@ const ProductsPage = () => {
               <div className="grid-products">
                 {products.map(p => <ProductCard key={p.id} product={p} />)}
               </div>
-              {/* Pagination */}
+
+              {/* ── Pagination ── */}
               {pagination.totalPages > 1 && (
                 <div className="pagination">
                   <button
                     className="btn btn-ghost btn-sm"
-                    disabled={pagination.isFirst}
-                    onClick={() => setParam('page', page - 1)}
+                    disabled={page === 0}
+                    onClick={() => goToPage(page - 1)}
                   >
                     ← Prev
                   </button>
@@ -119,8 +159,8 @@ const ProductsPage = () => {
                   </span>
                   <button
                     className="btn btn-ghost btn-sm"
-                    disabled={pagination.isLast}
-                    onClick={() => setParam('page', page + 1)}
+                    disabled={page >= pagination.totalPages - 1}
+                    onClick={() => goToPage(page + 1)}
                   >
                     Next →
                   </button>
