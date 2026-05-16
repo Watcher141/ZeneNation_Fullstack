@@ -2,6 +2,9 @@
 
 .hscroll-wrap {
   position: relative;
+  /* Side padding creates space for arrow buttons */
+  padding: 0 20px;
+  margin: 0 -20px;
 }
 
 /* ── Track ── */
@@ -11,11 +14,11 @@
   overflow-x: auto;
   scroll-snap-type: x mandatory;
   -webkit-overflow-scrolling: touch;
-  scrollbar-width: none;       /* Firefox */
-  padding: 8px 4px 16px;       /* bottom padding for shadow */
+  scrollbar-width: none;
+  padding: 8px 4px 16px;
 }
 
-.hscroll-track::-webkit-scrollbar { display: none; } /* Chrome/Safari */
+.hscroll-track::-webkit-scrollbar { display: none; }
 
 /* Every direct child snaps */
 .hscroll-track > * {
@@ -32,7 +35,7 @@
   width: 36px;
   height: 36px;
   border-radius: 50%;
-  border: 1px solid var(--border-color, rgba(255,255,255,0.1));
+  border: 1px solid rgba(255,255,255,0.15);
   background: var(--bg-secondary, #1a1a2e);
   color: var(--text-primary, #fff);
   font-size: 22px;
@@ -41,17 +44,27 @@
   align-items: center;
   justify-content: center;
   cursor: pointer;
-  box-shadow: 0 2px 12px rgba(0,0,0,0.4);
-  transition: background 0.2s, opacity 0.2s;
-  opacity: 0.7;
+  box-shadow: 0 2px 12px rgba(0,0,0,0.5);
+  transition: background 0.2s, opacity 0.2s, transform 0.2s;
+  opacity: 0.8;
+  padding: 0;
 }
 
-.hscroll-btn:hover { opacity: 1; background: var(--accent-primary, #e94560); color: white; }
+.hscroll-btn:hover {
+  opacity: 1;
+  background: var(--accent-primary, #e94560);
+  color: white;
+  transform: translateY(-60%) scale(1.1);
+}
 
-.hscroll-btn--left  { left: -14px; }
-.hscroll-btn--right { right: -14px; }
+.hscroll-btn--left  { left: -4px; }
+.hscroll-btn--right { right: -4px; }
 
-/* Hide arrows on touch devices — they swipe natively */
+/* Hide arrows on touch devices */
 @media (hover: none) {
   .hscroll-btn { display: none; }
+  .hscroll-wrap {
+    padding: 0;
+    margin: 0;
+  }
 }

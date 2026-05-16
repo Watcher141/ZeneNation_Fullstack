@@ -419,33 +419,63 @@
 .category-card--scroll {
   width: 140px;
   min-width: 140px;
+  max-width: 140px;
 }
 
-/* Product card scroll wrapper */
+/* Product card scroll wrapper — fixed width so all cards same size */
 .product-card-scroll-wrap {
-  width: 220px;
-  min-width: 220px;
+  width: 240px;
+  min-width: 240px;
+  max-width: 240px;
+}
+
+/* Make ProductCard fill its wrapper fully */
+.product-card-scroll-wrap .product-card {
+  width: 100%;
+  height: 100%;
 }
 
 /* Preorder card scroll */
 .preorder-home-card--scroll {
-  width: 200px;
-  min-width: 200px;
+  width: 210px;
+  min-width: 210px;
+  max-width: 210px;
 }
 
-/* Mobile — slightly smaller */
-@media (max-width: 480px) {
+/* Mobile */
+@media (max-width: 768px) {
   .category-card--scroll {
-    width: 120px;
-    min-width: 120px;
+    width: 110px;
+    min-width: 110px;
+    max-width: 110px;
   }
   .product-card-scroll-wrap {
-    width: 180px;
-    min-width: 180px;
+    width: 200px;
+    min-width: 200px;
+    max-width: 200px;
   }
   .preorder-home-card--scroll {
+    width: 180px;
+    min-width: 180px;
+    max-width: 180px;
+  }
+}
+
+@media (max-width: 480px) {
+  .category-card--scroll {
+    width: 100px;
+    min-width: 100px;
+    max-width: 100px;
+  }
+  .product-card-scroll-wrap {
     width: 170px;
     min-width: 170px;
+    max-width: 170px;
+  }
+  .preorder-home-card--scroll {
+    width: 160px;
+    min-width: 160px;
+    max-width: 160px;
   }
 }
 

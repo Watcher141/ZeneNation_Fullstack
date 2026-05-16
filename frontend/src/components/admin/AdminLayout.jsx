@@ -5,6 +5,7 @@ import { useAuth } from '../../context/AuthContext';
 import {
   MdDashboard,
   MdCampaign,
+  MdHome,
   MdCategory,
   MdInventory2,
   MdShoppingBag,
@@ -26,7 +27,8 @@ const navItems = [
   { path: '/admin/orders',     icon: MdShoppingBag, label: 'Orders'     },
   { path: '/admin/coupons',    icon: MdLocalOffer,  label: 'Coupons'    },
   { path: '/admin/users',      icon: MdPeople,      label: 'Users'      },
-  { path: '/admin/announcements', icon: MdCampaign,   label: 'Announcements' },
+  { path: '/admin/announcements', icon: MdCampaign,
+  MdHome,   label: 'Announcements' },
 ];
 
 const AdminLayout = ({ children }) => {

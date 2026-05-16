@@ -69,6 +69,7 @@ public class SecurityConfig {
                 .requestMatchers("/actuator/**").permitAll()
                 .requestMatchers("/ping").permitAll()
                 .requestMatchers(HttpMethod.GET, "/api/v1/announcements/active").permitAll()
+                .requestMatchers(HttpMethod.GET, "/api/v1/home-sections/active").permitAll()
 
                 // ── ADMIN ─────────────────────────────────────────────────────
                 .requestMatchers("/api/v1/admin/**").hasRole("ADMIN")

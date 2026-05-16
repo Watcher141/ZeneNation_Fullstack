@@ -396,6 +396,11 @@ public class ProductServiceImpl implements ProductService {
                 .orElseThrow(() -> new ResourceNotFoundException("Category", "id", categoryId));
     }
 
+    /** Public accessor for HomeSectionServiceImpl */
+    public ProductSummaryResponse toSummaryResponsePublic(Product product) {
+        return toSummaryResponse(product);
+    }
+
     private ProductSummaryResponse toSummaryResponse(Product product) {
         // Get primary image URL
         String primaryImageUrl = productImageRepository

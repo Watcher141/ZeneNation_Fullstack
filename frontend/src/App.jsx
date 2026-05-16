@@ -41,6 +41,7 @@ import AdminOrders from './pages/admin/AdminOrders';
 import AdminCoupons from './pages/admin/AdminCoupons';
 import AdminUsers from './pages/admin/AdminUsers';
 import AdminAnnouncements from './pages/admin/AdminAnnouncements';
+import AdminHomeSections from './pages/admin/AdminHomeSections';
 
 const AppLayout = ({ children }) => (
   <>
@@ -102,6 +103,7 @@ const App = () => {
             <Route path="/admin/coupons" element={<AdminRoute><AdminCoupons /></AdminRoute>} />
             <Route path="/admin/users" element={<AdminRoute><AdminUsers /></AdminRoute>} />
             <Route path="/admin/announcements" element={<AdminRoute><AdminAnnouncements /></AdminRoute>} />
+            <Route path="/admin/home-sections" element={<AdminRoute><AdminHomeSections /></AdminRoute>} />
 
             {/* ── 404 ── */}
             <Route path="*" element={<AppLayout><NotFoundPage /></AppLayout>} />
