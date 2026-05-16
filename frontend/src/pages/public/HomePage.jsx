@@ -2,6 +2,7 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { productApi } from '../../api/productApi';
+import { categoryApi } from '../../api/categoryApi';
 import { homeSectionApi } from '../../api/homeSectionApi';
 import ProductCard from '../../components/product/ProductCard';
 import HorizontalScroll from '../../components/common/HorizontalScroll';
@@ -11,14 +12,20 @@ import './HomePage.css';
 
 const HomePage = () => {
   const [sections, setSections] = useState([]);
+  const [categories, setCategories] = useState([]);
+  const [preorders, setPreorders] = useState([]);
   const [announcements, setAnnouncements] = useState([]);
   const [annIndex, setAnnIndex] = useState(0);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    announcementApi.getActive()
-      .then(res => setAnnouncements(res.data.data || []))
-      .catch(() => {});
+    announcementApi.getActive().then(r => setAnnouncements(r.data.data || [])).catch(() => {});
+    categoryApi.getAll().then(r => setCategories(r.data.data || [])).catch(() => {});
+    productApi.getPreorders().then(r => setPreorders(r.data.data || [])).catch(() => {});
+    homeSectionApi.getActive()
+      .then(r => setSections(r.data.data || []))
+      .catch(() => {})
+      .finally(() => setLoading(false));
   }, []);
 
   useEffect(() => {
@@ -26,13 +33,6 @@ const HomePage = () => {
     const timer = setInterval(() => setAnnIndex(i => (i + 1) % announcements.length), 4000);
     return () => clearInterval(timer);
   }, [announcements.length]);
-
-  useEffect(() => {
-    homeSectionApi.getActive()
-      .then(res => setSections(res.data.data || []))
-      .catch(() => {})
-      .finally(() => setLoading(false));
-  }, []);
 
   if (loading) return <Loader fullPage />;
 
@@ -71,6 +71,29 @@ const HomePage = () => {
         </div>
       </section>
 
+      {/* ── Shop by Category ── */}
+      {categories.length > 0 && (
+        <section className="section">
+          <div className="container">
+            <div className="section-header">
+              <h2 className="section-title">Shop by Category</h2>
+              <Link to="/products" className="btn btn-ghost btn-sm">View All →</Link>
+            </div>
+            <HorizontalScroll>
+              {categories.map(cat => (
+                <Link to={`/products?categoryId=${cat.id}`} key={cat.id} className="category-card category-card--scroll">
+                  {cat.imageUrl
+                    ? <img src={cat.imageUrl} alt={cat.name} />
+                    : <div className="category-icon">🎌</div>
+                  }
+                  <span className="category-name">{cat.name}</span>
+                </Link>
+              ))}
+            </HorizontalScroll>
+          </div>
+        </section>
+      )}
+
       {/* ── Dynamic Sections from Admin ── */}
       {sections.map(section => (
         <section key={section.id} className="section">
@@ -84,7 +107,6 @@ const HomePage = () => {
                 <Link to={section.viewAllUrl} className="btn btn-ghost btn-sm">View All →</Link>
               )}
             </div>
-
             {section.products?.length > 0 ? (
               <HorizontalScroll>
                 {section.products.map(p => (
@@ -96,12 +118,54 @@ const HomePage = () => {
             ) : (
               <div className="empty-state" style={{ padding: '24px 0' }}>
                 <p className="empty-state-title" style={{ fontSize: 14 }}>No products in this section yet</p>
-                <p className="empty-state-desc">Add products from the admin panel → Home Sections</p>
+                <p className="empty-state-desc">Add products from Admin → Home Sections</p>
               </div>
             )}
           </div>
         </section>
       ))}
+
+      {/* ── Preorder Section (always shown if preorders exist) ── */}
+      {preorders.length > 0 && (
+        <section className="preorder-section">
+          <div className="container">
+            <div className="section-header">
+              <div>
+                <div className="preorder-section-badge">🚀 Coming Soon</div>
+                <h2 className="section-title">Preorder Collection</h2>
+                <p className="section-subtitle">Reserve upcoming anime collectibles before they're gone</p>
+              </div>
+              <Link to="/preorder" className="btn btn-ghost btn-sm">View All →</Link>
+            </div>
+            <HorizontalScroll>
+              {preorders.map(product => (
+                <Link to={`/products/${product.slug}`} key={product.id} className="preorder-home-card preorder-home-card--scroll">
+                  <div className="preorder-home-img">
+                    {product.primaryImageUrl
+                      ? <img src={product.primaryImageUrl} alt={product.name} />
+                      : <span>🎌</span>}
+                    <div className="preorder-home-badge">PREORDER</div>
+                  </div>
+                  <div className="preorder-home-info">
+                    <p className="preorder-home-name">{product.name}</p>
+                    {product.estimatedShipDate && (
+                      <p className="preorder-home-date">
+                        Ships {new Date(product.estimatedShipDate).toLocaleDateString('en-IN', { month: 'short', year: 'numeric' })}
+                      </p>
+                    )}
+                    <div className="preorder-home-price">
+                      <span className="text-muted text-xs">From </span>
+                      <span className="text-gold" style={{ fontWeight: 700 }}>
+                        ₹{Math.ceil(Number(product.discountedPrice || product.price) / 2).toLocaleString('en-IN')}
+                      </span>
+                    </div>
+                  </div>
+                </Link>
+              ))}
+            </HorizontalScroll>
+          </div>
+        </section>
+      )}
 
       {/* ── Promo Banner ── */}
       <section className="promo-banner">
@@ -139,6 +203,7 @@ const HomePage = () => {
           )}
         </div>
       </section>
+
     </div>
   );
 };

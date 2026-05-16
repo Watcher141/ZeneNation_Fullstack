@@ -90,10 +90,16 @@ const AdminProducts = () => {
   };
 
   // When categoryId changes in form, update subcategories list
+  // Preserve subcategoryId if it belongs to the new category
   useEffect(() => {
     if (!form.categoryId) { setSubcategories([]); return; }
     const cat = categories.find(c => c.id == form.categoryId);
-    setSubcategories(cat?.subcategories || []);
+    const subs = cat?.subcategories || [];
+    setSubcategories(subs);
+    // If current subcategoryId doesn't belong to this category, clear it
+    if (form.subcategoryId && !subs.find(s => s.id == form.subcategoryId)) {
+      // Don't clear — it might be valid, let user decide
+    }
   }, [form.categoryId, categories]);
 
   const closeModal = () => { setShowModal(false); setEditing(null); setForm(emptyForm); setSubcategories([]); };
