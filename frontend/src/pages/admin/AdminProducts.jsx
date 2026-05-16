@@ -55,30 +55,46 @@ const AdminProducts = () => {
     setShowModal(true);
   };
 
-  const openEdit = (p) => {
+  const openEdit = async (p) => {
     setEditing(p);
-    const parentId = p.category?.parentId || null;
-    const catId = parentId ? String(parentId) : String(p.category?.id || '');
-    const subId = parentId ? String(p.category?.id || '') : '';
-
-    // Load subcategories for the selected parent category
-    if (parentId) {
-      const parentCat = categories.find(c => c.id == parentId);
-      setSubcategories(parentCat?.subcategories || []);
-    } else {
-      const cat = categories.find(c => c.id == p.category?.id);
-      setSubcategories(cat?.subcategories || []);
-    }
-
-    setForm({
-      name: p.name, description: p.description, tagline: p.tagline || '',
-      price: p.price, discountPercent: p.discountPercent || '0',
-      stockQuantity: p.stockQuantity, categoryId: catId, subcategoryId: subId,
-      isActive: p.isActive, isPreorder: p.isPreorder || false,
-      estimatedShipDate: p.estimatedShipDate || '', preorderNote: p.preorderNote || '',
-    });
     setShowModal(true);
+
+    // Fetch full product details to get description (list API may truncate it)
+    try {
+      const res = await productApi.getById(p.id);
+      const full = res.data.data;
+      const parentId = full.category?.parentId || null;
+      const catId = parentId ? String(parentId) : String(full.category?.id || '');
+      const subId = parentId ? String(full.category?.id || '') : '';
+
+      setForm({
+        name: full.name, description: full.description || '', tagline: full.tagline || '',
+        price: full.price, discountPercent: full.discountPercent || '0',
+        stockQuantity: full.stockQuantity, categoryId: catId, subcategoryId: subId,
+        isActive: full.isActive, isPreorder: full.isPreorder || false,
+        estimatedShipDate: full.estimatedShipDate || '', preorderNote: full.preorderNote || '',
+      });
+    } catch {
+      // Fallback to list data if detail fetch fails
+      const parentId = p.category?.parentId || null;
+      const catId = parentId ? String(parentId) : String(p.category?.id || '');
+      const subId = parentId ? String(p.category?.id || '') : '';
+      setForm({
+        name: p.name, description: p.description || '', tagline: p.tagline || '',
+        price: p.price, discountPercent: p.discountPercent || '0',
+        stockQuantity: p.stockQuantity, categoryId: catId, subcategoryId: subId,
+        isActive: p.isActive, isPreorder: p.isPreorder || false,
+        estimatedShipDate: p.estimatedShipDate || '', preorderNote: p.preorderNote || '',
+      });
+    }
   };
+
+  // When categoryId changes in form, update subcategories list
+  useEffect(() => {
+    if (!form.categoryId) { setSubcategories([]); return; }
+    const cat = categories.find(c => c.id == form.categoryId);
+    setSubcategories(cat?.subcategories || []);
+  }, [form.categoryId, categories]);
 
   const closeModal = () => { setShowModal(false); setEditing(null); setForm(emptyForm); setSubcategories([]); };
 
