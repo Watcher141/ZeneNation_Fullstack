@@ -12,7 +12,6 @@ import {
   MdLocalOffer,
   MdPeople,
   MdLogout,
-  MdHome,
   MdMenu,
   MdClose,
   MdChevronLeft,
