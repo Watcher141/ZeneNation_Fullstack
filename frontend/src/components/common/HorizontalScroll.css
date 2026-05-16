@@ -1,0 +1,57 @@
+/* HorizontalScroll.css */
+
+.hscroll-wrap {
+  position: relative;
+}
+
+/* ── Track ── */
+.hscroll-track {
+  display: flex;
+  gap: 16px;
+  overflow-x: auto;
+  scroll-snap-type: x mandatory;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;       /* Firefox */
+  padding: 8px 4px 16px;       /* bottom padding for shadow */
+}
+
+.hscroll-track::-webkit-scrollbar { display: none; } /* Chrome/Safari */
+
+/* Every direct child snaps */
+.hscroll-track > * {
+  scroll-snap-align: start;
+  flex-shrink: 0;
+}
+
+/* ── Arrow buttons ── */
+.hscroll-btn {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-60%);
+  z-index: 10;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  border: 1px solid var(--border-color, rgba(255,255,255,0.1));
+  background: var(--bg-secondary, #1a1a2e);
+  color: var(--text-primary, #fff);
+  font-size: 22px;
+  line-height: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  box-shadow: 0 2px 12px rgba(0,0,0,0.4);
+  transition: background 0.2s, opacity 0.2s;
+  opacity: 0.7;
+}
+
+.hscroll-btn:hover { opacity: 1; background: var(--accent-primary, #e94560); color: white; }
+
+.hscroll-btn--left  { left: -14px; }
+.hscroll-btn--right { right: -14px; }
+
+/* Hide arrows on touch devices — they swipe natively */
+@media (hover: none) {
+  .hscroll-btn { display: none; }
+}

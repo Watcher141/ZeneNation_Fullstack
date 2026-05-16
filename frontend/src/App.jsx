@@ -1,5 +1,6 @@
 // src/App.jsx
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
+import ScrollToTop from './components/common/ScrollToTop';
 import { Toaster } from 'react-hot-toast';
 import { AuthProvider } from './context/AuthContext';
 import { CartProvider } from './context/CartContext';
@@ -69,6 +70,7 @@ const App = () => {
               duration: 3000,
             }}
           />
+          <ScrollToTop />
           <Routes>
             {/* ── Public ── */}
             <Route path="/" element={<LandingPage />} />

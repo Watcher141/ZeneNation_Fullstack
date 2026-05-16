@@ -216,4 +216,35 @@
 @media (max-width: 480px) {
   .footer-links { flex-direction: column; gap: var(--space-6); }
   .newsletter-text { flex-direction: column; align-items: flex-start; }
+
+  .footer-inner {
+    padding: var(--space-8) var(--space-4);
+  }
+
+  .footer-newsletter .container {
+    padding: 0 var(--space-4);
+  }
+
+  .footer-brand {
+    max-width: 100%;
+  }
+
+  .footer-col h4 {
+    margin-top: var(--space-2);
+  }
+
+  .newsletter-form {
+    flex-direction: column;
+    gap: var(--space-3);
+  }
+
+  .newsletter-input {
+    width: 100%;
+  }
+
+  .footer-bottom .container {
+    padding: 0 var(--space-4);
+    gap: var(--space-1);
+    font-size: 12px;
+  }
 }

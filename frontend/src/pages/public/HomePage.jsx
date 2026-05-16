@@ -4,6 +4,7 @@ import { Link } from 'react-router-dom';
 import { productApi } from '../../api/productApi';
 import { categoryApi } from '../../api/categoryApi';
 import ProductCard from '../../components/product/ProductCard';
+import HorizontalScroll from '../../components/common/HorizontalScroll';
 import Loader from '../../components/common/Loader';
 import { announcementApi } from '../../api/apiCollections';
 import './HomePage.css';
@@ -25,7 +26,6 @@ const HomePage = () => {
       .catch(() => {});
   }, []);
 
-  // Auto-rotate announcements every 4 seconds
   useEffect(() => {
     if (announcements.length <= 1) return;
     const timer = setInterval(() => setAnnIndex(i => (i + 1) % announcements.length), 4000);
@@ -36,7 +36,7 @@ const HomePage = () => {
     const fetchData = async () => {
       try {
         const [prodRes, catRes] = await Promise.all([
-          productApi.getAll({ page: 0, size: 8, sortBy: 'createdAt', sortDir: 'desc' }),
+          productApi.getAll({ page: 0, size: 12, sortBy: 'createdAt', sortDir: 'desc' }),
           categoryApi.getAll(),
         ]);
         setProducts(prodRes.data.data?.content || []);
@@ -54,8 +54,9 @@ const HomePage = () => {
 
   return (
     <div className="home-page">
-      Hero
-      {/* <section className="hero">
+
+      {/* ── Hero ── */}
+      <section className="hero">
         <div className="container hero-inner">
           <div className="hero-content">
             <div className="hero-badge">🎌 Anime Merchandise</div>
@@ -68,12 +69,8 @@ const HomePage = () => {
               hand-picked for true anime fans.
             </p>
             <div className="hero-actions">
-              <Link to="/products" className="btn btn-primary btn-lg">
-                Shop Now
-              </Link>
-              <Link to="/search?keyword=figure" className="btn btn-secondary btn-lg">
-                Explore Figures
-              </Link>
+              <Link to="/products" className="btn btn-primary btn-lg">Shop Now</Link>
+              <Link to="/search?keyword=figure" className="btn btn-secondary btn-lg">Explore Figures</Link>
             </div>
           </div>
           <div className="hero-visual">
@@ -81,72 +78,9 @@ const HomePage = () => {
             <span className="hero-emoji">⚔️</span>
           </div>
         </div>
-      </section> */}
+      </section>
 
-            {/* Featured Banner Carousel */}
-<section className="featured-carousel-section">
-
-  {/* OUTSIDE AURORA */}
-  <div className="outside-aurora aurora-left"></div>
-  <div className="outside-aurora aurora-bottom"></div>
-  <div className="outside-aurora aurora-right"></div>
-
-  {/* Grid */}
-  <div className="featured-grid-overlay"></div>
-
-  <div className="container">
-
-    <div className="featured-carousel">
-
-      {/* Background Image */}
-      <img
-        src="https://images.unsplash.com/photo-1578632767115-351597cf2477?q=80&w=1600&auto=format&fit=crop"
-        alt="Anime Banner"
-        className="featured-carousel-image"
-      />
-
-      {/* Overlay */}
-      <div className="featured-carousel-overlay" />
-
-      {/* Content */}
-      <div className="featured-carousel-content">
-
-        <div className="featured-carousel-badge">
-          ⚔️ Featured Collection
-        </div>
-
-        <h2 className="featured-carousel-title">
-          Legendary <span>Anime Weapons</span>
-        </h2>
-
-        <p className="featured-carousel-desc">
-          Explore premium LED katanas, collector swords,
-          anime replicas and exclusive collectibles.
-        </p>
-
-        <div className="featured-carousel-actions">
-
-          <Link
-            to="/search?keyword=katana"
-            className="btn btn-primary btn-lg"
-          >
-            Explore Collection
-          </Link>
-
-          <Link
-            to="/products"
-            className="btn btn-secondary btn-lg"
-          >
-            View Products
-          </Link>
-
-        </div>
-      </div>
-    </div>
-  </div>
-</section>
-
-      {/* Categories */}
+      {/* ── Categories — horizontal scroll ── */}
       {categories.length > 0 && (
         <section className="section">
           <div className="container">
@@ -154,23 +88,22 @@ const HomePage = () => {
               <h2 className="section-title">Shop by Category</h2>
               <Link to="/products" className="btn btn-ghost btn-sm">View All</Link>
             </div>
-            <div className="category-grid">
+            <HorizontalScroll>
               {categories.map((cat) => (
-                <Link to={`/products?categoryId=${cat.id}`} key={cat.id} className="category-card">
-                  {cat.imageUrl ? (
-                    <img src={cat.imageUrl} alt={cat.name} />
-                  ) : (
-                    <div className="category-icon">🎌</div>
-                  )}
+                <Link to={`/products?categoryId=${cat.id}`} key={cat.id} className="category-card category-card--scroll">
+                  {cat.imageUrl
+                    ? <img src={cat.imageUrl} alt={cat.name} />
+                    : <div className="category-icon">🎌</div>
+                  }
                   <span className="category-name">{cat.name}</span>
                 </Link>
               ))}
-            </div>
+            </HorizontalScroll>
           </div>
         </section>
       )}
 
-      {/* Latest Products */}
+      {/* ── New Arrivals — horizontal scroll ── */}
       <section className="section">
         <div className="container">
           <div className="section-header">
@@ -178,9 +111,13 @@ const HomePage = () => {
             <Link to="/products" className="btn btn-ghost btn-sm">View All</Link>
           </div>
           {products.length > 0 ? (
-            <div className="grid-products">
-              {products.map((p) => <ProductCard key={p.id} product={p} />)}
-            </div>
+            <HorizontalScroll>
+              {products.map((p) => (
+                <div key={p.id} className="product-card-scroll-wrap">
+                  <ProductCard product={p} />
+                </div>
+              ))}
+            </HorizontalScroll>
           ) : (
             <div className="empty-state">
               <div className="empty-state-icon">🎌</div>
@@ -191,7 +128,7 @@ const HomePage = () => {
         </div>
       </section>
 
-      {/* Preorder Section */}
+      {/* ── Preorder — horizontal scroll ── */}
       {preorders.length > 0 && (
         <section className="preorder-section">
           <div className="container">
@@ -203,9 +140,9 @@ const HomePage = () => {
               </div>
               <Link to="/preorder" className="btn btn-ghost btn-sm">View All →</Link>
             </div>
-            <div className="preorder-home-grid">
-              {preorders.slice(0, 4).map(product => (
-                <Link to={`/products/${product.slug}`} key={product.id} className="preorder-home-card">
+            <HorizontalScroll>
+              {preorders.map(product => (
+                <Link to={`/products/${product.slug}`} key={product.id} className="preorder-home-card preorder-home-card--scroll">
                   <div className="preorder-home-img">
                     {product.primaryImageUrl
                       ? <img src={product.primaryImageUrl} alt={product.name} />
@@ -215,7 +152,9 @@ const HomePage = () => {
                   <div className="preorder-home-info">
                     <p className="preorder-home-name">{product.name}</p>
                     {product.estimatedShipDate && (
-                      <p className="preorder-home-date">Ships {new Date(product.estimatedShipDate).toLocaleDateString('en-IN', { month: 'short', year: 'numeric' })}</p>
+                      <p className="preorder-home-date">
+                        Ships {new Date(product.estimatedShipDate).toLocaleDateString('en-IN', { month: 'short', year: 'numeric' })}
+                      </p>
                     )}
                     <div className="preorder-home-price">
                       <span className="text-muted text-xs">From </span>
@@ -226,12 +165,12 @@ const HomePage = () => {
                   </div>
                 </Link>
               ))}
-            </div>
+            </HorizontalScroll>
           </div>
         </section>
       )}
 
-      {/* Dynamic Announcements / Deals Banner */}
+      {/* ── Promo Banner ── */}
       <section className="promo-banner">
         <div className="container promo-inner">
           {announcements.length > 0 ? (
@@ -268,6 +207,7 @@ const HomePage = () => {
           )}
         </div>
       </section>
+
     </div>
   );
 };
