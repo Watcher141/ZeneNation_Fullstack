@@ -55,27 +55,38 @@ const HomePage = () => {
   return (
     <div className="home-page">
 
-      {/* ── Hero ── */}
-      <section className="hero">
-        <div className="container hero-inner">
-          <div className="hero-content">
-            <div className="hero-badge">🎌 Anime Merchandise</div>
-            <h1 className="hero-title">
-              Your Ultimate<br />
-              <span className="hero-accent">Anime Store</span>
-            </h1>
-            <p className="hero-desc">
-              Figures, wooden katanas, keychains and more —
-              hand-picked for true anime fans.
-            </p>
-            <div className="hero-actions">
-              <Link to="/products" className="btn btn-primary btn-lg">Shop Now</Link>
-              <Link to="/search?keyword=figure" className="btn btn-secondary btn-lg">Explore Figures</Link>
+      {/* ── Featured Banner Carousel ── */}
+      <section className="featured-carousel-section">
+        <div className="outside-aurora aurora-left" />
+        <div className="outside-aurora aurora-bottom" />
+        <div className="outside-aurora aurora-right" />
+        <div className="featured-grid-overlay" />
+        <div className="container">
+          <div className="featured-carousel">
+            <img
+              src="https://images.unsplash.com/photo-1578632767115-351597cf2477?q=80&w=1600&auto=format&fit=crop"
+              alt="Anime Banner"
+              className="featured-carousel-image"
+            />
+            <div className="featured-carousel-overlay" />
+            <div className="featured-carousel-content">
+              <div className="featured-carousel-badge">⚔️ Featured Collection</div>
+              <h2 className="featured-carousel-title">
+                Legendary <span>Anime Weapons</span>
+              </h2>
+              <p className="featured-carousel-desc">
+                Explore premium LED katanas, collector swords,
+                anime replicas and exclusive collectibles.
+              </p>
+              <div className="featured-carousel-actions">
+                <Link to="/search?keyword=katana" className="btn btn-primary btn-lg">
+                  Explore Collection
+                </Link>
+                <Link to="/products" className="btn btn-secondary btn-lg">
+                  View Products
+                </Link>
+              </div>
             </div>
-          </div>
-          <div className="hero-visual">
-            <div className="hero-orb" />
-            <span className="hero-emoji">⚔️</span>
           </div>
         </div>
       </section>
