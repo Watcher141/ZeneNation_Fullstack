@@ -25,16 +25,36 @@ const ProductDetailPage = () => {
   const [adding, setAdding] = useState(false);
   const [suggestions, setSuggestions] = useState([]);
 
-  // Fetch suggestions from same category when product loads
+  // Fetch suggestions when product loads
   useEffect(() => {
-    if (!product?.category?.id) return;
-    productApi.getByCategory(product.category.id, { page: 0, size: 10 })
-      .then(res => {
-        const all = res.data.data?.content || [];
-        setSuggestions(all.filter(p => p.id !== product.id));
-      })
-      .catch(() => {});
-  }, [product?.id, product?.category?.id]);
+    if (!product) return;
+
+    const fetchSuggestions = async () => {
+      try {
+        // Always use parent category for broader results
+        // If product is in a subcategory, parentId exists; otherwise use category.id
+        const catId = product.category?.parentId || product.category?.id;
+
+        if (catId) {
+          const res = await productApi.getByCategory(catId, { page: 0, size: 20 });
+          const all = res.data.data?.content || [];
+          const filtered = all.filter(p => p.id !== product.id);
+          if (filtered.length >= 3) {
+            setSuggestions(filtered.slice(0, 10));
+            return;
+          }
+        }
+
+        // Fallback — latest products from whole store
+        const res = await productApi.getAll({ page: 0, size: 12, sortBy: 'createdAt', sortDir: 'desc' });
+        setSuggestions((res.data.data?.content || []).filter(p => p.id !== product.id).slice(0, 10));
+      } catch {
+        // silent fail
+      }
+    };
+
+    fetchSuggestions();
+  }, [product?.id]);
 
   useEffect(() => {
     productApi.getBySlug(slug)
