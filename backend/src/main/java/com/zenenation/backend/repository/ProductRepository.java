@@ -50,6 +50,11 @@ public interface ProductRepository extends JpaRepository<Product, Long> {
     Page<Product> findByCategoryIdAndIsDeletedFalseAndIsActiveTrue(
             @Param("categoryId") Long categoryId, Pageable pageable);
 
+    /** Fetch products in a category AND all its subcategories */
+    @Query("SELECT p FROM Product p WHERE p.isDeleted = false AND p.isActive = true AND (p.category.id = :categoryId OR p.category.parent.id = :categoryId) ORDER BY p.createdAt DESC")
+    Page<Product> findByCategoryOrSubcategoriesAndIsActiveTrue(
+            @Param("categoryId") Long categoryId, Pageable pageable);
+
     @Query(value = """
             SELECT p FROM Product p JOIN FETCH p.category
             WHERE p.id = :id AND p.isDeleted = false AND p.isActive = true

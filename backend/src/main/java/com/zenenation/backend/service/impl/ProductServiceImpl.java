@@ -79,13 +79,20 @@ public class ProductServiceImpl implements ProductService {
             Long categoryId, int page, int size) {
 
         // Verify category exists and is active
-        if (!categoryRepository.findByIdAndIsDeletedFalse(categoryId).isPresent()) {
-            throw new ResourceNotFoundException("Category", "id", categoryId);
-        }
+        Category cat = categoryRepository.findByIdAndIsDeletedFalse(categoryId)
+                .orElseThrow(() -> new ResourceNotFoundException("Category", "id", categoryId));
 
         Pageable pageable = PageRequest.of(page, size, Sort.by("createdAt").descending());
-        Page<Product> products = productRepository
-                .findByCategoryIdAndIsDeletedFalseAndIsActiveTrue(categoryId, pageable);
+        Page<Product> products;
+
+        // If this is a top-level category (has subcategories or no parent),
+        // fetch products from this category AND all subcategories
+        if (cat.getParent() == null) {
+            products = productRepository.findByCategoryOrSubcategoriesAndIsActiveTrue(categoryId, pageable);
+        } else {
+            // It's a subcategory — fetch only from this subcategory
+            products = productRepository.findByCategoryIdAndIsDeletedFalseAndIsActiveTrue(categoryId, pageable);
+        }
 
         return PagedResponse.of(products.map(this::toSummaryResponse));
     }
