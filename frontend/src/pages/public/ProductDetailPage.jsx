@@ -8,6 +8,8 @@ import Loader from '../../components/common/Loader';
 import StarRating from '../../components/product/StarRating';
 import ProductReviews from '../../components/product/ProductReviews';
 import { MdShoppingCart } from 'react-icons/md';
+import HorizontalScroll from '../../components/common/HorizontalScroll';
+import ProductCard from '../../components/product/ProductCard';
 import toast from 'react-hot-toast';
 import './ProductDetailPage.css';
 
@@ -21,6 +23,18 @@ const ProductDetailPage = () => {
   const [selectedImage, setSelectedImage] = useState(0);
   const [quantity, setQuantity] = useState(1);
   const [adding, setAdding] = useState(false);
+  const [suggestions, setSuggestions] = useState([]);
+
+  // Fetch suggestions from same category when product loads
+  useEffect(() => {
+    if (!product?.category?.id) return;
+    productApi.getByCategory(product.category.id, { page: 0, size: 10 })
+      .then(res => {
+        const all = res.data.data?.content || [];
+        setSuggestions(all.filter(p => p.id !== product.id));
+      })
+      .catch(() => {});
+  }, [product?.id, product?.category?.id]);
 
   useEffect(() => {
     productApi.getBySlug(slug)
@@ -143,6 +157,25 @@ const ProductDetailPage = () => {
             </div>
           </div>
         </div>
+
+        {/* ── You May Also Like ── */}
+        {suggestions.length > 0 && (
+          <div className="suggestions-section">
+            <div className="section-header" style={{ marginBottom: 'var(--space-6)' }}>
+              <h2 className="section-title">You May Also Like</h2>
+              <a href={`/products?categoryId=${product.category?.id}`} className="btn btn-ghost btn-sm">
+                View All →
+              </a>
+            </div>
+            <HorizontalScroll>
+              {suggestions.map(p => (
+                <div key={p.id} className="product-card-scroll-wrap">
+                  <ProductCard product={p} />
+                </div>
+              ))}
+            </HorizontalScroll>
+          </div>
+        )}
 
         {/* ── Reviews Section ── */}
         <ProductReviews productId={product.id} />
