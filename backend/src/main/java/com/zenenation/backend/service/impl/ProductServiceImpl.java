@@ -73,6 +73,7 @@ public class ProductServiceImpl implements ProductService {
     }
 
     @Override
+    @Transactional(readOnly = true)
     @Cacheable(value = CacheConfig.CACHE_PRODUCTS,
                key = "'cat-' + #categoryId + '-' + #page + '-' + #size")
     public PagedResponse<ProductSummaryResponse> getProductsByCategory(
