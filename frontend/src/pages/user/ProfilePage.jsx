@@ -6,12 +6,25 @@ import { addressApi } from '../../api/apiCollections';
 import toast from 'react-hot-toast';
 import Loader from '../../components/common/Loader';
 import {
-  MdPerson, MdEmail, MdPhone, MdEdit, MdSave, MdClose,
-  MdLock, MdLocationOn, MdAdd, MdDelete, MdStar,
+  MdPerson,
+  MdEmail,
+  MdPhone,
+  MdEdit,
+  MdSave,
+  MdClose,
+  MdLock,
+  MdLocationOn,
+  MdAdd,
+  MdDelete,
+  MdStar,
   MdVerified,
+  MdLocalOffer,
+  MdContentCopy
 } from 'react-icons/md';
 
 import { SiGoogle } from 'react-icons/si';
+
+
 import RewardsWallet from '../../components/user/RewardsWallet';
 import './ProfilePage.css';
 
@@ -155,7 +168,7 @@ const ProfilePage = () => {
                 {profile?.role === 'ROLE_ADMIN' ? 'Admin' : 'Member'}
               </span>
               <span className="badge badge-purple">
-                {profile?.provider === 'GOOGLE' ? <><MdGoogle size={12} /> Google</> : 'Email'}
+                {profile?.provider === 'GOOGLE' ? <><SiGoogle size={12} /> Google</> : 'Email'}
               </span>
               <span className={`badge ${profile?.isActive ? 'badge-green' : 'badge-red'}`}>
                 {profile?.isActive ? 'Active' : 'Inactive'}
@@ -381,7 +394,7 @@ const ProfilePage = () => {
             </div>
             {profile?.provider !== 'LOCAL' ? (
               <div className="empty-state" style={{ padding: 'var(--space-10)' }}>
-                <MdGoogle size={48} color="var(--text-muted)" />
+                <SiGoogle size={48} color="var(--text-muted)" />
                 <p className="empty-state-title">Google Account</p>
                 <p className="empty-state-desc">You signed in with Google — password change is not available for Google accounts</p>
               </div>
