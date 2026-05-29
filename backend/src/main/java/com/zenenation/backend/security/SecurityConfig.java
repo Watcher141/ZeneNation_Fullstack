@@ -146,7 +146,13 @@ public class SecurityConfig {
         if (corsAllowedOrigins != null) {
             origins.addAll(corsAllowedOrigins);
         }
-        config.setAllowedOriginPatterns(origins);
+        // config.setAllowedOriginPatterns(origins);
+        config.setAllowedOriginPatterns(List.of(
+            "https://zenenation.in",
+            "https://www.zenenation.in",
+            "http://localhost:5173",
+            "https://*.vercel.app"
+        ));
 
         config.setAllowedMethods(List.of(
             "GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"
