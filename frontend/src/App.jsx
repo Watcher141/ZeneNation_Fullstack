@@ -74,8 +74,9 @@ const App = () => {
           <ScrollToTop />
           <Routes>
             {/* ── Public ── */}
-            <Route path="/" element={<LandingPage />} />
-            <Route path="/home" element={<AppLayout><HomePage /></AppLayout>} />
+            {/*Removed <Route path="/" element={<LandingPage />} />*/}
+            {/**Modified Path='/' will now lead to <AppLayout> */}
+            <Route path="/" element={<AppLayout><HomePage /></AppLayout>} />
             <Route path="/products" element={<AppLayout><ProductsPage /></AppLayout>} />
             <Route path="/products/:slug" element={<AppLayout><ProductDetailPage /></AppLayout>} />
             <Route path="/search" element={<AppLayout><SearchPage /></AppLayout>} />
