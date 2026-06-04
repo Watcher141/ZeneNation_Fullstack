@@ -15,6 +15,11 @@ const RegisterPage = () => {
 
   const handleChange = (e) => setForm({ ...form, [e.target.name]: e.target.value });
 
+  //Adding Google Registartion 03/06/2026
+  const handleGoogleLogin=()=>{
+     window.location.href =
+    `${import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080'}/oauth2/authorization/google`;
+  }
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (form.password !== form.confirmPassword) {
@@ -30,7 +35,8 @@ const RegisterPage = () => {
         phoneNumber: form.phoneNumber || undefined,
       });
       toast.success(`Welcome to Zenenation, ${data.name}!`);
-      navigate('/home');
+      {/**Changed it to '/' as '/home' no longer exists   -- 3/6/2026 */}
+      navigate('/');
     } catch (err) {
       toast.error(err.response?.data?.message || 'Registration failed');
     } finally {
@@ -89,6 +95,20 @@ const RegisterPage = () => {
             {loading ? 'Creating account...' : 'Create Account'}
           </button>
         </form>
+        <div className="auth-divider"><span>or</span></div>
+        {/**Added the Button For Google Registartion in UI  -- 3/6/2026 */}
+        <button
+        type="button"
+        className="btn btn-ghost btn-full"
+        onClick={handleGoogleLogin}
+        >
+        <img
+        src="https://www.google.com/favicon.ico"
+        alt="Google"
+        width={16}
+        />
+         Register with Google
+        </button>
 
         <p className="auth-switch">
           Already have an account? <Link to="/login">Login</Link>

@@ -26,7 +26,8 @@ const OAuth2CallbackPage = () => {
           localStorage.setItem('user', JSON.stringify(user));
           setUser(user);
           toast.success(`Welcome, ${user.name}!`);
-          navigate(user.role === 'ROLE_ADMIN' ? '/admin' : '/home');
+          {/**Changing navigate to '/home' to '/' after google reg   -- 6/3/2026 */}
+          navigate(user.role === 'ROLE_ADMIN' ? '/admin' : '/');
         })
         .catch(() => {
           toast.error('Login failed. Please try again.');
