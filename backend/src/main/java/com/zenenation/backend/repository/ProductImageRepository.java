@@ -47,4 +47,14 @@ public interface ProductImageRepository extends JpaRepository<ProductImage, Long
      * before calling this — otherwise orphaned images remain on Cloudinary.
      */
     void deleteByProductId(Long productId);
+
+
+    /*accepts a List of product IDs using the In keyword. changed on 7/6/2026 */
+
+    /*
+        Added the new method findByProductIdInAndIsPrimaryTrue(List<Long> productIds);.
+        This allows the database to fetch all 200 images in one single trip (using a SQL IN clause) instead of forcing the app to make 200 separate network calls.
+     */
+
+    List<ProductImage> findByProductIdInAndIsPrimaryTrue(List<Long> productIds);
 }

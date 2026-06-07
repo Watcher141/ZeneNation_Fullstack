@@ -409,6 +409,64 @@ public class ProductServiceImpl implements ProductService {
         return toSummaryResponse(product);
     }
 
+
+
+
+    // ── Optimized Bulk Accessor ──
+
+
+    /*
+        Created a brand new method called toSummaryResponseBulkPublic(List<Product> products)
+        This method takes the entire list of products, calls our new repository method to get all the images at once, stores them in a lightning-fast memory dictionary (Map), and builds your DTOs without ever touching the database inside a loop.
+           - 7/6/2026
+     */
+    public List<ProductSummaryResponse> toSummaryResponseBulkPublic(List<Product> products) {
+        if (products == null || products.isEmpty()) {
+            return List.of();
+        }
+
+        // 1. Extract all Product IDs into a single list
+        List<Long> productIds = products.stream()
+                .map(Product::getId)
+                .collect(Collectors.toList());
+
+        // 2. Fetch ALL primary images in exactly ONE query using the new In method
+        List<ProductImage> primaryImages = productImageRepository
+                .findByProductIdInAndIsPrimaryTrue(productIds);
+
+        // 3. Convert to a fast memory map (Product ID -> Image URL)
+        Map<Long, String> imageMap = primaryImages.stream()
+                .collect(Collectors.toMap(
+                        image -> image.getProduct().getId(), // <── CHANGED THIS LINE
+                        ProductImage::getImageUrl,
+                        (existing, replacement) -> existing // Fallback for duplicates
+                ));
+
+        // 4. Map all products, fetching the image from memory instead of the database!
+        return products.stream().map(product -> ProductSummaryResponse.builder()
+                .id(product.getId())
+                .name(product.getName())
+                .tagline(product.getTagline())
+                .isPreorder(product.getIsPreorder())
+                .estimatedShipDate(product.getEstimatedShipDate())
+                .preorderNote(product.getPreorderNote())
+                .slug(product.getSlug())
+                .price(product.getPrice())
+                .discountPercent(product.getDiscountPercent())
+                .discountedPrice(PriceUtil.calculateDiscountedPrice(
+                        product.getPrice(), product.getDiscountPercent()))
+                .stockQuantity(product.getStockQuantity())
+                .isActive(product.getIsActive())
+                .primaryImageUrl(imageMap.get(product.getId())) // <── THE MAGIC SPEED UP
+                .category(CategoryResponse.builder()
+                        .id(product.getCategory().getId())
+                        .name(product.getCategory().getName())
+                        .build())
+                .createdAt(product.getCreatedAt())
+                .build()
+        ).collect(Collectors.toList());
+    }
+
     private ProductSummaryResponse toSummaryResponse(Product product) {
         // Get primary image URL
         String primaryImageUrl = productImageRepository

@@ -125,12 +125,21 @@ public class HomeSectionServiceImpl {
 
     // ── Mapper ──
 
+    // ── Mapper ──
+    /*
+        Instead of mapping products to DTOs one-by-one (which was triggering the N+1 loop trap), we updated it to gather all the raw Product entities into a list first, and then hand that entire list over to the new bulk method
+           - 7/6/2026
+     */
     private HomeSectionResponse toResponse(HomeSection section) {
-        List<ProductSummaryResponse> products = section.getSectionProducts() == null ? List.of() :
+        // 1. Gather all the raw Product entities from this section first
+        List<Product> rawProducts = section.getSectionProducts() == null ? List.of() :
                 section.getSectionProducts().stream()
                         .filter(sp -> sp.getProduct() != null)
-                        .map(sp -> productService.toSummaryResponsePublic(sp.getProduct()))
+                        .map(HomeSectionProduct::getProduct)
                         .collect(Collectors.toList());
+
+        // 2. Pass the entire list to our new optimized bulk method!
+        List<ProductSummaryResponse> products = productService.toSummaryResponseBulkPublic(rawProducts);
 
         return HomeSectionResponse.builder()
                 .id(section.getId())
