@@ -113,7 +113,7 @@ server:
 # Get API key from: https://resend.com/api-keys
 resend:
   api-key: ${RESEND_API_KEY:re_your_api_key_here}
-  from:     ${MAIL_FROM:Zenenation <noreply@zenenation.com>}
+  from:     ${MAIL_FROM:Zenenation <noreply@zenenation.in>}
 
 # JWT
 jwt:
