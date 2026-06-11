@@ -43,7 +43,8 @@ const CheckoutPage = () => {
   const hasPreorderItems = items.some(item => item.isPreorder);
 
   const subtotal = Number(cart?.subtotal || 0);
-  const deliveryCharge = subtotal >= 500 ? 0 : 49;
+  //const deliveryCharge = subtotal >= 500 ? 0 : 49;
+  const deliveryCharge = 0; // TEST OVERRIDE
   const discountAmount = couponData ? Number(couponData.discountAmount) : 0;
   const rewardsDiscount = useRewards ? redeemPoints : 0;
   const total = Math.max(0, subtotal + deliveryCharge - discountAmount - rewardsDiscount);

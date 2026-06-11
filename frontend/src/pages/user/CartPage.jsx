@@ -40,7 +40,8 @@ const CartPage = () => {
 
   const items = cart?.items || [];
   const subtotal = cart?.subtotal || 0;
-  const deliveryCharge = subtotal >= 500 ? 0 : 49;
+  //const deliveryCharge = subtotal >= 500 ? 0 : 49;
+  const deliveryCharge = 0;
   const total = Number(subtotal) + deliveryCharge;
 
   return (
