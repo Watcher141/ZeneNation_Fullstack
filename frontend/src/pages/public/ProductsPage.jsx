@@ -4,8 +4,20 @@ import { useSearchParams } from 'react-router-dom';
 import { productApi } from '../../api/productApi';
 import { categoryApi } from '../../api/categoryApi';
 import ProductCard from '../../components/product/ProductCard';
-import Loader from '../../components/common/Loader';
 import './ProductsPage.css';
+
+// ── NEW: Skeleton Loader Component ──
+const ProductSkeleton = () => (
+  <div className="product-card skeleton-card">
+    <div className="skeleton-image"></div>
+    <div className="product-card-info">
+      <div className="skeleton-text skeleton-category"></div>
+      <div className="skeleton-text skeleton-title"></div>
+      <div className="skeleton-text skeleton-price"></div>
+      <div className="skeleton-button"></div>
+    </div>
+  </div>
+);
 
 const ProductsPage = () => {
   const [searchParams, setSearchParams] = useSearchParams();
@@ -45,18 +57,11 @@ const ProductsPage = () => {
     }
   };
 
-  // ── Fix: setParam does NOT reset page unless explicitly requested ──
-  const setParam = (key, value) => {
-    const p = new URLSearchParams(searchParams);
-    p.set(key, String(value));
-    setSearchParams(p);
-  };
-
   const setCategory = (catId) => {
     const p = new URLSearchParams(searchParams);
     if (catId) p.set('categoryId', catId);
     else p.delete('categoryId');
-    p.set('page', '0'); // reset page when category changes
+    p.set('page', '0'); 
     setSearchParams(p);
   };
 
@@ -64,7 +69,7 @@ const ProductsPage = () => {
     const p = new URLSearchParams(searchParams);
     p.set('sortBy', sb);
     p.set('sortDir', sd);
-    p.set('page', '0'); // reset page when sort changes
+    p.set('page', '0'); 
     setSearchParams(p);
   };
 
@@ -99,7 +104,6 @@ const ProductsPage = () => {
                   </span>
                 )}
               </button>
-              {/* Show subcategories when parent or any sub is selected */}
               {(categoryId == cat.id || cat.subcategories?.some(s => s.id == categoryId)) &&
                 cat.subcategories?.map(sub => (
                   <button
@@ -138,7 +142,15 @@ const ProductsPage = () => {
             </select>
           </div>
 
-          {loading ? <Loader /> : products.length > 0 ? (
+          {/* ── Conditional Rendering for Skeleton Loader ── */}
+          {loading ? (
+            <div className="grid-products">
+              {/* Render 12 fake skeleton cards */}
+              {[...Array(12)].map((_, index) => (
+                <ProductSkeleton key={index} />
+              ))}
+            </div>
+          ) : products.length > 0 ? (
             <>
               <div className="grid-products">
                 {products.map(p => <ProductCard key={p.id} product={p} />)}

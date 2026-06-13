@@ -10,7 +10,7 @@
 .footer-newsletter {
   background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
   border-bottom: 1px solid var(--border-primary);
-  padding: var(--space-10) 0;
+  padding: var(--space-4) 0;
 }
 
 .newsletter-inner {
@@ -28,8 +28,8 @@
 }
 
 .newsletter-icon {
-  width: 56px;
-  height: 56px;
+  width: 38px;
+  height: 38px;
   border-radius: var(--radius-lg);
   background: var(--accent-primary-10);
   border: 1px solid var(--accent-primary-20);

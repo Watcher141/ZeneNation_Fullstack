@@ -135,7 +135,8 @@
 }
 
 /* Promo banner */
-.promo-banner {
+/*Currnently not needed*/
+/*.promo-banner {
   background: linear-gradient(135deg, var(--bg-tertiary) 0%, #1a1a2e 100%);
   border-top: 1px solid var(--border-primary);
   border-bottom: 1px solid var(--border-primary);
@@ -153,7 +154,7 @@
   font-size: var(--text-2xl);
   margin-bottom: var(--space-2);
 }
-
+*/
 @media (max-width: 768px) {
   .hero-inner {
     flex-direction: column;
@@ -220,13 +221,13 @@
   .hero-actions .btn { width: 100%; justify-content: center; }
 }
 
-.promo-banner {
+/*.promo-banner {
   background: linear-gradient(135deg, #16213e 0%, #0f3460 100%);
   padding: var(--space-8) 0;
   margin-top: var(--space-12);
   /* Remove bottom margin so footer newsletter sits flush */
-  margin-bottom: 0;
-}
+  /*margin-bottom: 0;
+}*/
 
 .promo-inner {
   display: flex;
@@ -486,7 +487,8 @@
 .featured-carousel-section {
   position: relative;
   overflow: hidden;
-  padding: 90px 0 120px;
+  padding: 90px 12px 120px;
+  box-sizing: border-box;
   background:
     radial-gradient(circle at top, rgba(120,60,255,0.08), transparent 35%),
     #050510;
@@ -634,10 +636,17 @@
 }
 
 @media (max-width: 768px) {
-  .featured-carousel-section { padding: 60px 0 90px; }
+  .featured-carousel-section {
+    padding: 60px 12px 90px;
+    box-sizing: border-box;
+  }
   .featured-carousel { height: 420px; border-radius: 26px; }
   .featured-carousel-content {
-    top: auto; bottom: 24px; left: 20px; right: 20px; transform: none;
+    top: auto;
+    bottom: 20px;
+    left: 16px;
+    right: 16px;
+    transform: none;
   }
   .featured-carousel-title { font-size: 2.2rem; }
   .featured-carousel-desc { font-size: 0.96rem; }

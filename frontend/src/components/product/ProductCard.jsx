@@ -1,4 +1,5 @@
 // src/components/product/ProductCard.jsx
+import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useCart } from '../../context/CartContext';
 import { useAuth } from '../../context/AuthContext';
@@ -10,19 +11,33 @@ const ProductCard = ({ product }) => {
   const { addToCart } = useCart();
   const { isAuthenticated } = useAuth();
   const navigate = useNavigate();
+  
+  // NEW: State to track if this specific button is currently loading
+  const [isAdding, setIsAdding] = useState(false);
 
   const handleAddToCart = async (e) => {
-    e.preventDefault();
+    e.preventDefault(); // Prevents the <Link> from triggering navigation
+    
+    // Prevent duplicate clicks if already processing
+    if (isAdding) return;
+
     if (!isAuthenticated()) {
       toast.error('Please login to add items to cart');
       navigate('/login');
       return;
     }
+    
+    // Lock the button
+    setIsAdding(true);
+    
     try {
       await addToCart(product.id, 1);
       toast.success(`${product.name} added to cart!`);
     } catch {
       toast.error('Failed to add to cart');
+    } finally {
+      // Unlock the button regardless of success or failure
+      setIsAdding(false);
     }
   };
 
@@ -60,9 +75,16 @@ const ProductCard = ({ product }) => {
         <button
           className="product-card-btn btn btn-primary btn-sm btn-full"
           onClick={handleAddToCart}
-          disabled={product.stockQuantity === 0}
+          // Disabled if out of stock OR currently adding to cart
+          disabled={product.stockQuantity === 0 || isAdding}
+          style={{ cursor: isAdding ? 'wait' : 'pointer' }}
         >
-          {product.stockQuantity === 0 ? 'Out of Stock' : 'Add to Cart'}
+          {isAdding 
+            ? 'Adding...' 
+            : product.stockQuantity === 0 
+              ? 'Out of Stock' 
+              : 'Add to Cart'
+          }
         </button>
       </div>
     </Link>

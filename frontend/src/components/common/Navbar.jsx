@@ -1,4 +1,3 @@
-// src/components/common/Navbar.jsx
 import { useState, useRef, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
@@ -62,10 +61,19 @@ const Navbar = () => {
     <>
       <nav className="navbar">
         <div className="container navbar-inner">
+
           {/* Logo */}
           <Link to="/" className="navbar-logo">
-            <span className="logo-zen">ZENE</span>
-            <span className="logo-nation">NATION</span>
+            <img
+              src="/button.png"
+              alt="Zenenation"
+              style={{
+                height: '50px',
+                width: 'auto',
+                objectFit: 'contain',
+                display: 'block',
+              }}
+            />
           </Link>
 
           {/* Desktop Search */}
