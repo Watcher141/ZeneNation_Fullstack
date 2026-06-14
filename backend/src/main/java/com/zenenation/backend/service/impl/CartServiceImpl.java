@@ -278,6 +278,7 @@ public class CartServiceImpl implements CartService {
                 .availableStock(product.getStockQuantity())
                 .isAvailable(isAvailable)
                 .isPreorder(product.getIsPreorder())
+                .weightGrams(product.getWeightGrams())
                 .build();
     }
 }

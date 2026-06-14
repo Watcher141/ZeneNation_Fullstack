@@ -28,4 +28,5 @@ public class CartItemResponse {
     private Integer availableStock;     // Frontend uses this to cap qty selector
     private Boolean isAvailable;        // False if product deleted or out of stock
     private Boolean isPreorder;         // True if product is a preorder item
+    private Integer weightGrams;        // Product weight in grams (for delivery calc)
 }

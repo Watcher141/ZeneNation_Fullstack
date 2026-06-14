@@ -34,6 +34,7 @@ public class OrderResponse {
     private BigDecimal subtotal;
     private BigDecimal deliveryCharge;
     private BigDecimal discountAmount;
+    private BigDecimal codCharge;
     private BigDecimal totalAmount;
 
     // Items

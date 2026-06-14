@@ -32,6 +32,7 @@ public class ProductDetailResponse {
     private BigDecimal discountPercent;
     private BigDecimal discountedPrice;     // Calculated field
     private Integer stockQuantity;
+    private Integer weightGrams;
     private Boolean isActive;
     private Boolean isDeleted;              // Admin only
     private List<ProductImageResponse> images;

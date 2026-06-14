@@ -31,6 +31,7 @@ public class ProductSummaryResponse {
     private BigDecimal discountPercent;
     private BigDecimal discountedPrice;     // Calculated: price - (price * discountPercent / 100)
     private Integer stockQuantity;
+    private Integer weightGrams;
     private Boolean isActive;
     private String primaryImageUrl;         // Only the main thumbnail
     private CategoryResponse category;      // Category name + id for breadcrumb

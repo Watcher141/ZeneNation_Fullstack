@@ -113,6 +113,15 @@ public class Product {
     private Integer stockQuantity = 0;
 
     /**
+     * Product weight in grams.
+     * Used for calculating weight-based delivery charges.
+     * 0 = weight not specified (treated as lightest slab).
+     */
+    @Column(name = "weight_grams", nullable = false)
+    @Builder.Default
+    private Integer weightGrams = 0;
+
+    /**
      * Short string used in product URLs.
      * Example: "apple-iphone-15-pro-max"
      * Generated from name in service layer.

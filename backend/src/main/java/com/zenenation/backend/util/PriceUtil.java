@@ -1,7 +1,11 @@
 package com.zenenation.backend.util;
 
+import com.zenenation.backend.entity.CodChargeSlab;
+import com.zenenation.backend.entity.DeliveryChargeSlab;
+
 import java.math.BigDecimal;
 import java.math.RoundingMode;
+import java.util.List;
 
 /**
  * Centralizes all price calculation logic.
@@ -83,25 +87,28 @@ public class PriceUtil {
     /**
      * Calculate the grand total of an order.
      *
-     * Formula: subtotal + deliveryCharge - discountAmount
+     * Formula: subtotal + deliveryCharge + codCharge - discountAmount
      *
      * Floors at zero — total can never be negative
      * (e.g. if a huge discount somehow exceeds subtotal + delivery).
      *
      * @param subtotal        sum of all line item totals
-     * @param deliveryCharge  shipping cost (0 for free delivery)
+     * @param deliveryCharge  shipping cost based on weight
+     * @param codCharge       extra charge for COD orders (0 for online)
      * @param discountAmount  coupon or promo discount (0 if none)
      * @return                final order total, rounded to 2 decimal places
      */
     public static BigDecimal calculateOrderTotal(
             BigDecimal subtotal,
             BigDecimal deliveryCharge,
+            BigDecimal codCharge,
             BigDecimal discountAmount) {
 
         BigDecimal delivery = deliveryCharge != null ? deliveryCharge : BigDecimal.ZERO;
+        BigDecimal cod = codCharge != null ? codCharge : BigDecimal.ZERO;
         BigDecimal discount = discountAmount != null ? discountAmount : BigDecimal.ZERO;
 
-        BigDecimal total = subtotal.add(delivery).subtract(discount);
+        BigDecimal total = subtotal.add(delivery).add(cod).subtract(discount);
 
         if (total.compareTo(BigDecimal.ZERO) < 0) {
             return BigDecimal.ZERO.setScale(MONETARY_SCALE, ROUNDING_MODE);
@@ -123,21 +130,61 @@ public class PriceUtil {
     }
 
     /**
-     * Calculate the delivery charge based on order subtotal.
-     * Simple rule: free delivery above ₹500, otherwise ₹49.
-     * Modify this logic freely as your delivery pricing evolves.
+     * Calculate delivery charge based on total order weight using slab pricing.
      *
-     * @param subtotal  order subtotal before delivery
-     * @return          delivery charge to apply
+     * Looks up the matching slab for the given weight.
+     * If weight exceeds all slabs, uses the highest slab's charge.
+     * If weight is 0 or slabs are empty, returns the first slab's charge as minimum.
+     *
+     * @param totalWeightGrams  total weight of all items in grams
+     * @param slabs             ordered list of delivery charge slabs (asc by minWeight)
+     * @return                  delivery charge for this weight
      */
-    public static BigDecimal calculateDeliveryCharge(BigDecimal subtotal) {
-        BigDecimal freeDeliveryThreshold = new BigDecimal("500.00");
-        BigDecimal standardDeliveryCharge = new BigDecimal("49.00");
-
-        if (subtotal.compareTo(freeDeliveryThreshold) >= 0) {
+    public static BigDecimal calculateDeliveryCharge(int totalWeightGrams, List<DeliveryChargeSlab> slabs) {
+        if (slabs == null || slabs.isEmpty()) {
+            // Fallback: no slabs configured — free delivery
             return BigDecimal.ZERO.setScale(MONETARY_SCALE, ROUNDING_MODE);
         }
 
-        return standardDeliveryCharge.setScale(MONETARY_SCALE, ROUNDING_MODE);
+        // If weight is 0 or less, use the first (lightest) slab
+        int weight = Math.max(totalWeightGrams, 1);
+
+        for (DeliveryChargeSlab slab : slabs) {
+            if (weight >= slab.getMinWeightGrams() && weight <= slab.getMaxWeightGrams()) {
+                return slab.getCharge().setScale(MONETARY_SCALE, ROUNDING_MODE);
+            }
+        }
+
+        // Weight exceeds all slabs — use the highest slab's charge
+        DeliveryChargeSlab highest = slabs.get(slabs.size() - 1);
+        return highest.getCharge().setScale(MONETARY_SCALE, ROUNDING_MODE);
+    }
+
+    /**
+     * Calculate COD extra charge based on order subtotal using slab pricing.
+     *
+     * Only applied when payment method is COD.
+     * Looks up the matching slab for the given subtotal.
+     * If subtotal exceeds all slabs, uses the highest slab's charge.
+     *
+     * @param subtotal  order subtotal (sum of item prices)
+     * @param slabs     ordered list of COD charge slabs (asc by minOrderAmount)
+     * @return          extra COD charge for this order amount
+     */
+    public static BigDecimal calculateCodCharge(BigDecimal subtotal, List<CodChargeSlab> slabs) {
+        if (slabs == null || slabs.isEmpty() || subtotal == null) {
+            return BigDecimal.ZERO.setScale(MONETARY_SCALE, ROUNDING_MODE);
+        }
+
+        for (CodChargeSlab slab : slabs) {
+            if (subtotal.compareTo(slab.getMinOrderAmount()) >= 0
+                    && subtotal.compareTo(slab.getMaxOrderAmount()) <= 0) {
+                return slab.getExtraCharge().setScale(MONETARY_SCALE, ROUNDING_MODE);
+            }
+        }
+
+        // Subtotal exceeds all slabs — use the highest slab's charge
+        CodChargeSlab highest = slabs.get(slabs.size() - 1);
+        return highest.getExtraCharge().setScale(MONETARY_SCALE, ROUNDING_MODE);
     }
 }

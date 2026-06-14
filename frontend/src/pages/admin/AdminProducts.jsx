@@ -9,7 +9,7 @@ import toast from 'react-hot-toast';
 
 const emptyForm = {
   name: '', description: '', tagline: '', price: '', discountPercent: '0',
-  stockQuantity: '', categoryId: '', subcategoryId: '', isActive: true,
+  stockQuantity: '', weightGrams: '0', categoryId: '', subcategoryId: '', isActive: true,
   isPreorder: false, estimatedShipDate: '', preorderNote: '',
 };
 
@@ -70,7 +70,8 @@ const AdminProducts = () => {
       setForm({
         name: full.name, description: full.description || '', tagline: full.tagline || '',
         price: full.price, discountPercent: full.discountPercent || '0',
-        stockQuantity: full.stockQuantity, categoryId: catId, subcategoryId: subId,
+        stockQuantity: full.stockQuantity, weightGrams: full.weightGrams || '0',
+        categoryId: catId, subcategoryId: subId,
         isActive: full.isActive, isPreorder: full.isPreorder || false,
         estimatedShipDate: full.estimatedShipDate || '', preorderNote: full.preorderNote || '',
       });
@@ -82,7 +83,8 @@ const AdminProducts = () => {
       setForm({
         name: p.name, description: p.description || '', tagline: p.tagline || '',
         price: p.price, discountPercent: p.discountPercent || '0',
-        stockQuantity: p.stockQuantity, categoryId: catId, subcategoryId: subId,
+        stockQuantity: p.stockQuantity, weightGrams: p.weightGrams || '0',
+        categoryId: catId, subcategoryId: subId,
         isActive: p.isActive, isPreorder: p.isPreorder || false,
         estimatedShipDate: p.estimatedShipDate || '', preorderNote: p.preorderNote || '',
       });
@@ -113,6 +115,7 @@ const AdminProducts = () => {
         price: Number(form.price),
         discountPercent: Number(form.discountPercent),
         stockQuantity: Number(form.stockQuantity),
+        weightGrams: Number(form.weightGrams || 0),
         categoryId: Number(form.subcategoryId || form.categoryId),
       };
       if (editing) {
@@ -217,7 +220,7 @@ const AdminProducts = () => {
             <thead>
               <tr>
                 <th>Image</th><th>Name</th><th>Category</th><th>Price</th>
-                <th>Stock</th><th>Status</th><th>Images</th><th>Actions</th>
+                <th>Stock</th><th>Weight</th><th>Status</th><th>Images</th><th>Actions</th>
               </tr>
             </thead>
             <tbody>
@@ -252,6 +255,11 @@ const AdminProducts = () => {
                     </span>
                   </td>
                   <td>
+                    <span className="text-muted" style={{ fontSize: 12 }}>
+                      {p.weightGrams ? `${p.weightGrams}g` : '—'}
+                    </span>
+                  </td>
+                  <td>
                     <span className={`badge ${p.isActive ? 'badge-green' : 'badge-red'}`}>
                       {p.isActive ? 'Active' : 'Hidden'}
                     </span>
@@ -275,7 +283,7 @@ const AdminProducts = () => {
                 </tr>
               ))}
               {filteredProducts.length === 0 && (
-                <tr><td colSpan={8} style={{ textAlign: 'center', padding: 32, color: 'var(--text-muted)' }}>No products found</td></tr>
+                <tr><td colSpan={9} style={{ textAlign: 'center', padding: 32, color: 'var(--text-muted)' }}>No products found</td></tr>
               )}
             </tbody>
           </table>
@@ -341,6 +349,11 @@ const AdminProducts = () => {
                       <label className="form-label">Stock Quantity *</label>
                       <input className="form-input" type="number" min="0" value={form.stockQuantity}
                         onChange={e => setForm({ ...form, stockQuantity: e.target.value })} required placeholder="50" />
+                    </div>
+                    <div className="form-group">
+                      <label className="form-label">Weight (grams)</label>
+                      <input className="form-input" type="number" min="0" value={form.weightGrams}
+                        onChange={e => setForm({ ...form, weightGrams: e.target.value })} placeholder="250" />
                     </div>
 
                     {/* ── Category ── */}

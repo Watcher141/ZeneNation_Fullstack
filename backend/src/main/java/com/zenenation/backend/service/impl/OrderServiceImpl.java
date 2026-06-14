@@ -21,6 +21,7 @@ import com.zenenation.backend.repository.*;
 import com.zenenation.backend.service.CouponService;
 import com.zenenation.backend.service.OrderService;
 import com.zenenation.backend.service.RewardService;
+import com.zenenation.backend.service.ShippingConfigService;
 import com.zenenation.backend.util.OrderNumberUtil;
 import com.zenenation.backend.util.PriceUtil;
 import com.zenenation.backend.util.SecurityUtil;
@@ -77,6 +78,7 @@ public class OrderServiceImpl implements OrderService {
     private final SecurityUtil securityUtil;
     private final CouponService couponService;
     private final RewardService rewardService;
+    private final ShippingConfigService shippingConfigService;
     private final AppProperties appProperties;
 
     @Value("${razorpay.key-id}")
@@ -141,12 +143,28 @@ public class OrderServiceImpl implements OrderService {
             );
         }
 
-        // ── 4. COD limit check ────────────────────────────────────────────
-        BigDecimal deliveryCharge = PriceUtil.calculateDeliveryCharge(subtotal);
+        // ── 4. Calculate delivery charge (weight-based) ────────────────────
+        int totalWeightGrams = 0;
+        for (CartItem item : cartItems) {
+            Product product = item.getProduct();
+            totalWeightGrams += (product.getWeightGrams() != null ? product.getWeightGrams() : 0) * item.getQuantity();
+        }
+
+        var deliverySlabs = shippingConfigService.getDeliverySlabs();
+        BigDecimal deliveryCharge = PriceUtil.calculateDeliveryCharge(totalWeightGrams, deliverySlabs);
+
+        // ── 4b. Calculate COD charge if applicable ────────────────────────
+        BigDecimal codCharge = BigDecimal.ZERO;
+        if (request.getPaymentMethod() == PaymentMethod.COD) {
+            var codSlabs = shippingConfigService.getCodSlabs();
+            codCharge = PriceUtil.calculateCodCharge(subtotal, codSlabs);
+        }
+
         BigDecimal totalAmount = PriceUtil.calculateOrderTotal(
-                subtotal, deliveryCharge, BigDecimal.ZERO
+                subtotal, deliveryCharge, codCharge, BigDecimal.ZERO
         );
 
+        // ── 4c. COD limit check ───────────────────────────────────────────
         if (request.getPaymentMethod() == PaymentMethod.COD) {
             BigDecimal codLimit = BigDecimal.valueOf(appProperties.getOrder().getCodMaxAmount());
             if (totalAmount.compareTo(codLimit) > 0) {
@@ -157,7 +175,7 @@ public class OrderServiceImpl implements OrderService {
             }
         }
 
-        // ── 4b. Apply coupon if provided ──────────────────────────────────
+        // ── 4d. Apply coupon if provided ──────────────────────────────────
         Coupon appliedCoupon = null;
         BigDecimal discountAmount = BigDecimal.ZERO;
 
@@ -166,7 +184,7 @@ public class OrderServiceImpl implements OrderService {
                     request.getCouponCode(), subtotal, user.getId()
             );
             discountAmount = couponService.calculateDiscount(appliedCoupon, subtotal);
-            totalAmount = PriceUtil.calculateOrderTotal(subtotal, deliveryCharge, discountAmount);
+            totalAmount = PriceUtil.calculateOrderTotal(subtotal, deliveryCharge, codCharge, discountAmount);
         }
 
         // ── 5. Create Order ───────────────────────────────────────────────
@@ -175,6 +193,7 @@ public class OrderServiceImpl implements OrderService {
                 .user(user)
                 .subtotal(subtotal)
                 .deliveryCharge(deliveryCharge)
+                .codCharge(codCharge)
                 .discountAmount(discountAmount)
                 .totalAmount(totalAmount)
                 .status(OrderStatus.PENDING)
@@ -486,6 +505,7 @@ public class OrderServiceImpl implements OrderService {
                 .paymentStatus(order.getPaymentStatus())
                 .subtotal(order.getSubtotal())
                 .deliveryCharge(order.getDeliveryCharge())
+                .codCharge(order.getCodCharge())
                 .discountAmount(order.getDiscountAmount())
                 .totalAmount(order.getTotalAmount())
                 .orderItems(itemResponses)

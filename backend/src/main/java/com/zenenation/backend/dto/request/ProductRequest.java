@@ -45,6 +45,9 @@ public class ProductRequest {
     @Min(value = 0, message = "Stock quantity cannot be negative")
     private Integer stockQuantity;
 
+    @Min(value = 0, message = "Weight cannot be negative")
+    private Integer weightGrams = 0;
+
     @NotNull(message = "Category ID is required")
     private Long categoryId;
 

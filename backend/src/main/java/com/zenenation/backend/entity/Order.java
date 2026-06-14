@@ -100,8 +100,16 @@ public class Order {
     private BigDecimal discountAmount = BigDecimal.ZERO;
 
     /**
+     * Extra charge applied when payment method is COD.
+     * Calculated from cod_charge_slabs based on order subtotal.
+     */
+    @Column(name = "cod_charge", nullable = false, precision = 10, scale = 2)
+    @Builder.Default
+    private BigDecimal codCharge = BigDecimal.ZERO;
+
+    /**
      * Final amount paid / to be paid.
-     * totalAmount = subtotal + deliveryCharge - discountAmount
+     * totalAmount = subtotal + deliveryCharge + codCharge - discountAmount
      */
     @Column(name = "total_amount", nullable = false, precision = 10, scale = 2)
     private BigDecimal totalAmount;

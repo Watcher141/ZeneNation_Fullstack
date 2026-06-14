@@ -70,9 +70,11 @@ public class SecurityConfig {
                 .requestMatchers("/ping").permitAll()
                 .requestMatchers(HttpMethod.GET, "/api/v1/announcements/active").permitAll()
                 .requestMatchers(HttpMethod.GET, "/api/v1/home-sections/active").permitAll()
+                .requestMatchers(HttpMethod.GET, "/api/v1/shipping/config").permitAll()
 
                 // ── ADMIN ─────────────────────────────────────────────────────
                 .requestMatchers("/api/v1/admin/**").hasRole("ADMIN")
+                .requestMatchers("/api/v1/shipping/admin/**").hasRole("ADMIN")
                 .requestMatchers(HttpMethod.POST,   "/api/v1/categories/**").hasRole("ADMIN")
                 .requestMatchers(HttpMethod.PUT,    "/api/v1/categories/**").hasRole("ADMIN")
                 .requestMatchers(HttpMethod.DELETE, "/api/v1/categories/**").hasRole("ADMIN")

@@ -170,6 +170,7 @@ public class ProductServiceImpl implements ProductService {
                 .price(request.getPrice())
                 .discountPercent(request.getDiscountPercent())
                 .stockQuantity(request.getStockQuantity())
+                .weightGrams(request.getWeightGrams() != null ? request.getWeightGrams() : 0)
                 .category(category)
                 .slug(slug)
                 .isActive(request.getIsActive())
@@ -210,6 +211,7 @@ public class ProductServiceImpl implements ProductService {
         product.setPrice(request.getPrice());
         product.setDiscountPercent(request.getDiscountPercent());
         product.setStockQuantity(request.getStockQuantity());
+        product.setWeightGrams(request.getWeightGrams() != null ? request.getWeightGrams() : 0);
         product.setCategory(category);
         product.setSlug(newSlug);
         product.setIsActive(request.getIsActive());
@@ -456,6 +458,7 @@ public class ProductServiceImpl implements ProductService {
                 .discountedPrice(PriceUtil.calculateDiscountedPrice(
                         product.getPrice(), product.getDiscountPercent()))
                 .stockQuantity(product.getStockQuantity())
+                .weightGrams(product.getWeightGrams())
                 .isActive(product.getIsActive())
                 .primaryImageUrl(imageMap.get(product.getId())) // <── THE MAGIC SPEED UP
                 .category(CategoryResponse.builder()
@@ -487,6 +490,7 @@ public class ProductServiceImpl implements ProductService {
                 .discountedPrice(PriceUtil.calculateDiscountedPrice(
                         product.getPrice(), product.getDiscountPercent()))
                 .stockQuantity(product.getStockQuantity())
+                .weightGrams(product.getWeightGrams())
                 .isActive(product.getIsActive())
                 .primaryImageUrl(primaryImageUrl)
                 .category(CategoryResponse.builder()
@@ -518,6 +522,7 @@ public class ProductServiceImpl implements ProductService {
                 .discountedPrice(PriceUtil.calculateDiscountedPrice(
                         product.getPrice(), product.getDiscountPercent()))
                 .stockQuantity(product.getStockQuantity())
+                .weightGrams(product.getWeightGrams())
                 .isActive(product.getIsActive())
                 .isDeleted(product.getIsDeleted())
                 .images(imageResponses)
