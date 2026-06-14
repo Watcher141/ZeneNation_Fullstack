@@ -42,6 +42,7 @@ import AdminCoupons from './pages/admin/AdminCoupons';
 import AdminUsers from './pages/admin/AdminUsers';
 import AdminAnnouncements from './pages/admin/AdminAnnouncements';
 import AdminHomeSections from './pages/admin/AdminHomeSections';
+import AdminShippingConfig from './pages/admin/AdminShippingConfig';
 
 const AppLayout = ({ children }) => (
   <>
@@ -105,6 +106,7 @@ const App = () => {
             <Route path="/admin/users" element={<AdminRoute><AdminUsers /></AdminRoute>} />
             <Route path="/admin/announcements" element={<AdminRoute><AdminAnnouncements /></AdminRoute>} />
             <Route path="/admin/home-sections" element={<AdminRoute><AdminHomeSections /></AdminRoute>} />
+            <Route path="/admin/shipping" element={<AdminRoute><AdminShippingConfig /></AdminRoute>} />
 
             {/* ── 404 ── */}
             <Route path="*" element={<AppLayout><NotFoundPage /></AppLayout>} />

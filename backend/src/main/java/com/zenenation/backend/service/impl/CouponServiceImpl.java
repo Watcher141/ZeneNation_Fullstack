@@ -162,7 +162,7 @@ public class CouponServiceImpl implements CouponService {
 
         BigDecimal discountAmount = calculateDiscount(coupon, cartTotal);
         BigDecimal finalAmount = PriceUtil.calculateOrderTotal(
-                cartTotal, BigDecimal.ZERO, discountAmount
+                cartTotal, BigDecimal.ZERO, BigDecimal.ZERO, discountAmount
         );
 
         String message = coupon.getDiscountType() == DiscountType.PERCENTAGE

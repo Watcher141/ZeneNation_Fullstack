@@ -143,11 +143,16 @@ const ProductDetailPage = () => {
               )}
             </div>
 
-            <div className="product-detail-stock">
+            <div className="product-detail-stock" style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
               {product.stockQuantity > 0
                 ? <span className="badge badge-green">✓ In Stock ({product.stockQuantity} available)</span>
                 : <span className="badge badge-red">✗ Out of Stock</span>
               }
+              {product.weightGrams > 0 && (
+                <span className="badge badge-blue" style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                  ⚖ {product.weightGrams >= 1000 ? `${(product.weightGrams / 1000).toFixed(2)} kg` : `${product.weightGrams}g`}
+                </span>
+              )}
             </div>
 
             {product.stockQuantity > 0 && (

@@ -16,6 +16,7 @@ import {
   MdClose,
   MdChevronLeft,
   MdChevronRight,
+  MdLocalShipping,
 } from 'react-icons/md';
 import './AdminLayout.css';
 
@@ -26,6 +27,7 @@ const navItems = [
   { path: '/admin/orders',     icon: MdShoppingBag, label: 'Orders'     },
   { path: '/admin/coupons',    icon: MdLocalOffer,  label: 'Coupons'    },
   { path: '/admin/users',      icon: MdPeople,      label: 'Users'      },
+  { path: '/admin/shipping',   icon: MdLocalShipping, label: 'Shipping Config' },
   { path: '/admin/announcements', icon: MdCampaign,  label: 'Announcements' },
   { path: '/admin/home-sections',  icon: MdHome,      label: 'Home Sections' },
 ];

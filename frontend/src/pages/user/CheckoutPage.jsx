@@ -2,7 +2,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useCart } from '../../context/CartContext';
-import { addressApi, orderApi, couponApi, rewardApi } from '../../api/apiCollections';
+import { addressApi, orderApi, couponApi, rewardApi, shippingApi } from '../../api/apiCollections';
 import toast from 'react-hot-toast';
 import Loader from '../../components/common/Loader';
 import {
@@ -37,17 +37,48 @@ const CheckoutPage = () => {
   const [maxRedeemable, setMaxRedeemable] = useState(0);
   const [useRewards, setUseRewards] = useState(false);
   const [preorderPaymentType, setPreorderPaymentType] = useState('FULL');
+  const [shippingConfig, setShippingConfig] = useState(null);
 
   // Must be defined before derived calculations
   const items = cart?.items || [];
   const hasPreorderItems = items.some(item => item.isPreorder);
 
+  const totalWeightGrams = items.reduce((sum, item) => sum + (item.weightGrams || 0) * item.quantity, 0);
+
+  const calculateDeliveryCharge = (weight, slabs) => {
+    if (!slabs || slabs.length === 0) return 0;
+    const w = Math.max(weight, 1);
+    for (const slab of slabs) {
+      if (w >= slab.minWeightGrams && w <= slab.maxWeightGrams) {
+        return Number(slab.charge);
+      }
+    }
+    const highest = slabs[slabs.length - 1];
+    return Number(highest.charge);
+  };
+
+  const calculateCodCharge = (sub, slabs) => {
+    if (!slabs || slabs.length === 0) return 0;
+    for (const slab of slabs) {
+      if (sub >= Number(slab.minOrderAmount) && sub <= Number(slab.maxOrderAmount)) {
+        return Number(slab.extraCharge);
+      }
+    }
+    const highest = slabs[slabs.length - 1];
+    return Number(highest.extraCharge);
+  };
+
   const subtotal = Number(cart?.subtotal || 0);
-  //const deliveryCharge = subtotal >= 500 ? 0 : 49;
-  const deliveryCharge = 0; // TEST OVERRIDE
+  const deliveryCharge = shippingConfig
+    ? calculateDeliveryCharge(totalWeightGrams, shippingConfig.deliverySlabs)
+    : 0;
+  const codCharge = paymentMethod === 'COD' && shippingConfig
+    ? calculateCodCharge(subtotal, shippingConfig.codSlabs)
+    : 0;
+
   const discountAmount = couponData ? Number(couponData.discountAmount) : 0;
   const rewardsDiscount = useRewards ? redeemPoints : 0;
-  const total = Math.max(0, subtotal + deliveryCharge - discountAmount - rewardsDiscount);
+  const total = Math.max(0, subtotal + deliveryCharge + codCharge - discountAmount - rewardsDiscount);
   const codLimit = 10000;
 
   // Preorder amount calculations
@@ -59,6 +90,10 @@ const CheckoutPage = () => {
     rewardApi.getWallet()
       .then(res => setRewardsBalance(res.data.data?.balance || 0))
       .catch(() => {});
+
+    shippingApi.getConfig()
+      .then(res => setShippingConfig(res.data.data))
+      .catch(err => console.error('Failed to load shipping config', err));
   }, []);
 
   useEffect(() => {
@@ -378,7 +413,7 @@ const CheckoutPage = () => {
                         onChange={e => {
                           setUseRewards(e.target.checked);
                           if (e.target.checked) {
-                            const max = Math.min(rewardsBalance, Math.floor((subtotal + deliveryCharge - discountAmount) * 0.5));
+                            const max = Math.min(rewardsBalance, Math.floor((subtotal + deliveryCharge + codCharge - discountAmount) * 0.5));
                             setMaxRedeemable(max);
                             setRedeemPoints(max);
                           } else {
@@ -437,9 +472,20 @@ const CheckoutPage = () => {
                 <div className="price-row">
                   <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
                     <MdLocalShipping size={16} /> Delivery
+                    {totalWeightGrams > 0 && (
+                      <span className="text-xs text-muted" style={{ fontWeight: 'normal' }}>
+                        ({totalWeightGrams >= 1000 ? `${(totalWeightGrams / 1000).toFixed(2)} kg` : `${totalWeightGrams}g`})
+                      </span>
+                    )}
                   </span>
                   <span>{deliveryCharge === 0 ? <span className="text-success">FREE</span> : `Rs.${deliveryCharge}`}</span>
                 </div>
+                {paymentMethod === 'COD' && codCharge > 0 && (
+                  <div className="price-row text-warning">
+                    <span>COD Surcharge</span>
+                    <span>Rs.{codCharge}</span>
+                  </div>
+                )}
                 {couponData && (
                   <div className="price-row text-success">
                     <span>Discount ({couponCode})</span>

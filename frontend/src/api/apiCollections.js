@@ -91,3 +91,10 @@ export const announcementApi = {
   toggle:       (id)     => api.patch(`/api/v1/admin/announcements/${id}/toggle`),
   getSubscriberCount: () => api.get('/api/v1/admin/subscribers/count'),
 };
+
+// ── Shipping API ──
+export const shippingApi = {
+  getConfig:           ()       => api.get('/api/v1/shipping/config'),
+  updateDeliverySlabs: (data)   => api.put('/api/v1/shipping/admin/delivery-slabs', data),
+  updateCodSlabs:      (data)   => api.put('/api/v1/shipping/admin/cod-slabs', data),
+};
