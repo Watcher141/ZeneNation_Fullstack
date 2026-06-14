@@ -42,16 +42,13 @@ const Navbar = () => {
   // Close dropdowns when clicking outside
   useEffect(() => {
     const handleClick = (e) => {
-      // 1. Handle user profile dropdown
       if (dropdownRef.current && !dropdownRef.current.contains(e.target)) {
         setDropdownOpen(false);
       }
       
-      // 2. THE FIX: Check if the click was inside EITHER search bar
       const clickedInsideDesktop = searchContainerRef.current && searchContainerRef.current.contains(e.target);
       const clickedInsideMobile = mobileSearchContainerRef.current && mobileSearchContainerRef.current.contains(e.target);
       
-      // Only close suggestions if they clicked totally outside both
       if (!clickedInsideDesktop && !clickedInsideMobile) {
         setShowSuggestions(false);
       }
@@ -166,10 +163,13 @@ const Navbar = () => {
           <>
             <div style={{ display: 'flex', flexDirection: 'column' }}>
               {searchResults.map((product) => {
-                const productSlug = product.name?.toLowerCase().replace(/\s+/g, '-');
+                // FIXED: Advanced URL slugification prevents '---' and removes special characters
+                const productSlug = product.name
+                  ?.toLowerCase()
+                  .replace(/[^a-z0-9]+/g, '-') // Replaces any non-alphanumeric character with a hyphen
+                  .replace(/^-+|-+$/g, '');    // Trims hyphens from the very start or end
                 
                 return (
-                  // Reverted back to a clean standard Link tag
                   <Link 
                     key={product.id} 
                     to={`/products/${productSlug}`} 
