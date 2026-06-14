@@ -1,7 +1,9 @@
+// src/components/Navbar.jsx
 import { useState, useRef, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { useCart } from '../../context/CartContext';
+import { productApi } from '../../api/productApi'; 
 import {
   MdSearch,
   MdShoppingCart,
@@ -20,32 +22,114 @@ const Navbar = () => {
   const { user, logout, isAdmin } = useAuth();
   const { cartCount } = useCart();
   const navigate = useNavigate();
+  
   const [search, setSearch] = useState('');
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [mobileSearchOpen, setMobileSearchOpen] = useState(false);
+  
   const dropdownRef = useRef(null);
+  const searchContainerRef = useRef(null);
+  const mobileSearchContainerRef = useRef(null);
+  
+  const [debouncedSearch, setDebouncedSearch] = useState('');
+  const [searchResults, setSearchResults] = useState([]);
+  const [isSearching, setIsSearching] = useState(false);
+  const [showSuggestions, setShowSuggestions] = useState(false);
+  
+  const [activeSearch, setActiveSearch] = useState(null);
 
+  // Close dropdowns when clicking outside
   useEffect(() => {
     const handleClick = (e) => {
+      // 1. Handle user profile dropdown
       if (dropdownRef.current && !dropdownRef.current.contains(e.target)) {
         setDropdownOpen(false);
       }
+      
+      // 2. THE FIX: Check if the click was inside EITHER search bar
+      const clickedInsideDesktop = searchContainerRef.current && searchContainerRef.current.contains(e.target);
+      const clickedInsideMobile = mobileSearchContainerRef.current && mobileSearchContainerRef.current.contains(e.target);
+      
+      // Only close suggestions if they clicked totally outside both
+      if (!clickedInsideDesktop && !clickedInsideMobile) {
+        setShowSuggestions(false);
+      }
     };
+    
     document.addEventListener('mousedown', handleClick);
     return () => document.removeEventListener('mousedown', handleClick);
   }, []);
 
+  // Close menus on navigation
   useEffect(() => {
     setMobileMenuOpen(false);
     setMobileSearchOpen(false);
+    setShowSuggestions(false); 
   }, [navigate]);
 
+  // Debounce the search input
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearch(search);
+    }, 400); 
+    return () => clearTimeout(timer);
+  }, [search]);
+
+  // Fetch, filter, and sort search results
+  useEffect(() => {
+    if (!debouncedSearch.trim()) {
+      setSearchResults([]);
+      setShowSuggestions(false);
+      return;
+    }
+
+    const fetchSearchResults = async () => {
+      setIsSearching(true);
+      setShowSuggestions(true);
+      try {
+        const res = await productApi.getAll({ 
+          page: 0, 
+          size: 1000 
+        });
+        
+        const allProducts = res.data?.data?.content || [];
+        
+        const filteredProducts = allProducts.filter(product => {
+          const term = debouncedSearch.toLowerCase();
+          return (
+            product.name?.toLowerCase().includes(term) ||
+            product.category?.name?.toLowerCase().includes(term)
+          );
+        });
+
+        filteredProducts.sort((a, b) => {
+          const term = debouncedSearch.toLowerCase();
+          const aName = a.name?.toLowerCase() || '';
+          const bName = b.name?.toLowerCase() || '';
+
+          if (aName === term) return -1;
+          if (bName === term) return 1;
+
+          return aName.length - bName.length;
+        });
+
+        setSearchResults(filteredProducts.slice(0, 5));
+      } catch (error) {
+        console.error("Failed to fetch search suggestions", error);
+      } finally {
+        setIsSearching(false);
+      }
+    };
+
+    fetchSearchResults();
+  }, [debouncedSearch]);
+
   const handleSearch = (e) => {
-    e.preventDefault();
+    e?.preventDefault();
     if (search.trim()) {
       navigate(`/search?keyword=${encodeURIComponent(search.trim())}`);
-      setSearch('');
+      setShowSuggestions(false); 
       setMobileSearchOpen(false);
     }
   };
@@ -55,6 +139,98 @@ const Navbar = () => {
     setDropdownOpen(false);
     setMobileMenuOpen(false);
     navigate('/');
+  };
+
+  const renderSuggestions = (type) => {
+    if (!showSuggestions || !search.trim() || activeSearch !== type) return null;
+
+    return (
+      <div className="search-suggestions" style={{
+        position: 'absolute',
+        top: '100%',
+        left: 0,
+        right: 0,
+        background: 'var(--bg-secondary)', 
+        border: '1px solid var(--border-color)',
+        borderRadius: '8px',
+        marginTop: '8px',
+        zIndex: 1000,
+        overflow: 'hidden',
+        boxShadow: '0 10px 25px rgba(0,0,0,0.5)',
+      }}>
+        {isSearching ? (
+          <div style={{ padding: '16px', textAlign: 'center', color: 'var(--text-muted)', fontSize: '14px' }}>
+            Searching...
+          </div>
+        ) : searchResults.length > 0 ? (
+          <>
+            <div style={{ display: 'flex', flexDirection: 'column' }}>
+              {searchResults.map((product) => {
+                const productSlug = product.name?.toLowerCase().replace(/\s+/g, '-');
+                
+                return (
+                  // Reverted back to a clean standard Link tag
+                  <Link 
+                    key={product.id} 
+                    to={`/products/${productSlug}`} 
+                    onClick={() => {
+                      setShowSuggestions(false);
+                      setSearch('');
+                      setMobileSearchOpen(false);
+                    }}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '12px',
+                      padding: '12px',
+                      textDecoration: 'none',
+                      borderBottom: '1px solid var(--border-color)',
+                      transition: 'background 0.2s'
+                    }}
+                    onMouseOver={(e) => e.currentTarget.style.background = 'var(--bg-tertiary)'}
+                    onMouseOut={(e) => e.currentTarget.style.background = 'transparent'}
+                  >
+                    <img 
+                      src={product.primaryImageUrl || '/placeholder.png'} 
+                      alt={product.name} 
+                      style={{ width: '40px', height: '40px', objectFit: 'cover', borderRadius: '4px', background: 'var(--bg-tertiary)' }} 
+                    />
+                    <div style={{ display: 'flex', flexDirection: 'column', flex: 1, minWidth: 0 }}>
+                      <span style={{ color: 'var(--text-primary)', fontSize: '14px', fontWeight: 500, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                        {product.name}
+                      </span>
+                      <span style={{ color: 'var(--text-muted)', fontSize: '12px' }}>
+                        ₹{product.discountedPrice || product.price}
+                      </span>
+                    </div>
+                  </Link>
+                );
+              })}
+            </div>
+            <button 
+              onClick={handleSearch} 
+              style={{
+                width: '100%',
+                padding: '12px',
+                background: 'var(--bg-tertiary)',
+                border: 'none',
+                color: 'var(--accent-primary)',
+                cursor: 'pointer',
+                fontWeight: 600,
+                fontSize: '14px',
+                textAlign: 'center'
+              }}
+            >
+              View all results for "{search}"
+            </button>
+          </>
+        ) : (
+          <div style={{ padding: '16px', textAlign: 'center', color: 'var(--text-muted)', fontSize: '14px' }}>
+            No products found
+          </div>
+        )}
+      </div>
+    );
   };
 
   return (
@@ -77,18 +253,28 @@ const Navbar = () => {
           </Link>
 
           {/* Desktop Search */}
-          <form className="navbar-search" onSubmit={handleSearch}>
-            <input
-              type="text"
-              placeholder="Search anime products..."
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              className="navbar-search-input"
-            />
-            <button type="submit" className="navbar-search-btn">
-              <MdSearch size={20} />
-            </button>
-          </form>
+          <div className="navbar-search-container" ref={searchContainerRef} style={{ position: 'relative', flex: 1, maxWidth: '500px', margin: '0 20px' }}>
+            <form className="navbar-search" onSubmit={handleSearch} style={{ margin: 0 }}>
+              <input
+                type="text"
+                placeholder="Search anime products..."
+                value={search}
+                onChange={(e) => {
+                  setSearch(e.target.value);
+                  if (e.target.value.trim()) setShowSuggestions(true);
+                }}
+                onFocus={() => {
+                  setActiveSearch('desktop');
+                  if (search.trim()) setShowSuggestions(true);
+                }}
+                className="navbar-search-input"
+              />
+              <button type="submit" className="navbar-search-btn">
+                <MdSearch size={20} />
+              </button>
+            </form>
+            {renderSuggestions('desktop')}
+          </div>
 
           {/* Desktop Actions */}
           <div className="navbar-actions">
@@ -138,7 +324,13 @@ const Navbar = () => {
 
           {/* Mobile right icons */}
           <div className="mobile-actions">
-            <button className="mobile-icon-btn" onClick={() => setMobileSearchOpen(!mobileSearchOpen)}>
+            <button className="mobile-icon-btn" onClick={() => {
+              setMobileSearchOpen(!mobileSearchOpen);
+              if (mobileSearchOpen) {
+                 setSearch('');
+                 setShowSuggestions(false);
+              }
+            }}>
               {mobileSearchOpen ? <MdClose size={22} /> : <MdSearch size={22} />}
             </button>
             {user && (
@@ -155,13 +347,20 @@ const Navbar = () => {
 
         {/* Mobile Search Bar */}
         {mobileSearchOpen && (
-          <div className="mobile-search-bar">
+          <div className="mobile-search-bar" ref={mobileSearchContainerRef} style={{ position: 'relative' }}>
             <form onSubmit={handleSearch} className="mobile-search-form">
               <input
                 type="text"
                 placeholder="Search anime products..."
                 value={search}
-                onChange={(e) => setSearch(e.target.value)}
+                onChange={(e) => {
+                  setSearch(e.target.value);
+                  if (e.target.value.trim()) setShowSuggestions(true);
+                }}
+                onFocus={() => {
+                  setActiveSearch('mobile');
+                  if (search.trim()) setShowSuggestions(true);
+                }}
                 className="form-input"
                 autoFocus
               />
@@ -169,6 +368,7 @@ const Navbar = () => {
                 <MdSearch size={18} />
               </button>
             </form>
+            {renderSuggestions('mobile')}
           </div>
         )}
       </nav>

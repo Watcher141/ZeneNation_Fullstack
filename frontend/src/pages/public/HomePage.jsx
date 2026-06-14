@@ -69,9 +69,9 @@ const HomePage = () => {
           <div className="featured-carousel" style={{
             position: 'relative',
             width: '100%',
-            height: '35vh',
-            minHeight: '280px',
-            maxHeight: '380px',
+            height: '35vh',       /* Restored to original */
+            minHeight: '280px',   /* Restored to original */
+            maxHeight: '380px',   /* Restored to original */
             borderRadius: '16px',
             overflow: 'hidden',
             display: 'flex',
@@ -107,9 +107,11 @@ const HomePage = () => {
               zIndex: 2,
               padding: 'clamp(1rem, 3vw, 2.5rem)',
               maxWidth: '600px',
+              width: '100%',
+              boxSizing: 'border-box',
               display: 'flex',
               flexDirection: 'column',
-              gap: '0.8rem'
+              gap: 'clamp(0.4rem, 1.5vw, 0.8rem)' /* Tighter gaps so content doesn't get too tall */
             }}>
               <div style={{
                 alignSelf: 'flex-start',
@@ -117,18 +119,19 @@ const HomePage = () => {
                 backdropFilter: 'blur(8px)',
                 padding: '4px 12px',
                 borderRadius: '30px',
-                fontSize: '0.7rem',
+                fontSize: 'clamp(0.6rem, 2vw, 0.7rem)', /* Adjusted min size */
                 fontWeight: '700',
                 color: '#fff',
                 border: '1px solid rgba(255,255,255,0.2)',
                 textTransform: 'uppercase',
-                letterSpacing: '1px'
+                letterSpacing: '1px',
+                whiteSpace: 'nowrap'
               }}>
                 ⚔️ Featured Collection
               </div>
 
               <h2 style={{
-                fontSize: 'clamp(1.8rem, 4vw, 2.8rem)',
+                fontSize: 'clamp(1.4rem, 5vw, 2.8rem)', /* Allows heading to shrink more on mobile */
                 color: '#fff',
                 margin: '0',
                 lineHeight: 1.1,
@@ -139,19 +142,19 @@ const HomePage = () => {
 
               <p style={{
                 color: '#e0e0e0',
-                fontSize: 'clamp(0.85rem, 1.5vw, 1rem)',
+                fontSize: 'clamp(0.75rem, 2vw, 1rem)', /* Allows text to shrink more on mobile */
                 margin: '0',
-                lineHeight: 1.5,
+                lineHeight: 1.4,
                 opacity: 0.9
               }}>
                 Explore premium LED katanas, diecast cars, Marvel figures, and exclusive anime replicas designed for true fans.
               </p>
 
-              <div style={{ display: 'flex', gap: '0.8rem', flexWrap: 'wrap', marginTop: '0.5rem' }}>
-                <Link to="/products" className="btn btn-primary" style={{ padding: '10px 20px', fontSize: '0.9rem' }}>
+              <div style={{ display: 'flex', gap: '0.6rem', flexWrap: 'wrap', marginTop: '0.2rem' }}>
+                <Link to="/products" className="btn btn-primary" style={{ padding: '8px 18px', fontSize: '0.85rem' }}>
                   Explore Collection
                 </Link>
-                <Link to="/categories" className="btn btn-ghost" style={{ padding: '10px 20px', fontSize: '0.9rem', border: '1px solid rgba(255,255,255,0.3)', color: '#fff', background: 'rgba(255,255,255,0.05)' }}>
+                <Link to="/categories" className="btn btn-ghost" style={{ padding: '8px 18px', fontSize: '0.85rem', border: '1px solid rgba(255,255,255,0.3)', color: '#fff', background: 'rgba(255,255,255,0.05)' }}>
                   View Categories
                 </Link>
               </div>
@@ -284,15 +287,6 @@ const HomePage = () => {
               <Link to="/products" className="btn btn-gold btn-lg">Shop Now</Link>
             </>
           ) : (
-            // {/* ── Free Delivery Fallback — commented out, uncomment to re-enable ──
-            // <>
-            //   <div className="promo-content">
-            //     <div className="promo-type-badge">🚚 Shipping</div>
-            //     <h2>Free Delivery on orders above ₹500</h2>
-            //     <p className="text-secondary">Shop your favourite anime merch with free shipping!</p>
-            //   </div>
-            //   <Link to="/products" className="btn btn-gold btn-lg">Shop Now</Link>
-            // </>
             null
           )}
         </div>

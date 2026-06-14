@@ -22,6 +22,9 @@ const AdminHomeSections = () => {
   const [pickerSection, setPickerSection] = useState(null);
   const [allProducts, setAllProducts] = useState([]);
   const [productSearch, setProductSearch] = useState('');
+  
+  // CHANGED: Added state to hold the debounced search term
+  const [debouncedSearch, setDebouncedSearch] = useState('');
   const [loadingProducts, setLoadingProducts] = useState(false);
 
   const fetchSections = useCallback(async () => {
@@ -29,18 +32,56 @@ const AdminHomeSections = () => {
     try {
       const res = await homeSectionApi.getAll();
       setSections(res.data.data || []);
-    } catch { toast.error('Failed to load sections'); }
-    finally { setLoading(false); }
+    } catch { 
+      toast.error('Failed to load sections'); 
+    } finally { 
+      setLoading(false); 
+    }
   }, []);
 
   useEffect(() => { fetchSections(); }, [fetchSections]);
 
+  // CHANGED: Added debounce effect. Updates `debouncedSearch` 500ms after user stops typing.
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearch(productSearch);
+    }, 500);
+    return () => clearTimeout(timer);
+  }, [productSearch]);
+
+  // CHANGED: Refactored product fetching into a useEffect that depends on `debouncedSearch`.
+  // This replaces the initial fetch that was previously inside `openPicker`.
+  useEffect(() => {
+    if (!pickerSection) return; // Only fetch if the modal is open
+
+    const fetchProductsForPicker = async () => {
+      setLoadingProducts(true);
+      try {
+        // CHANGED: Passing the debounced search term to the API
+        const res = await productApi.getAllAdmin({ 
+          page: 0, 
+          size: 100, 
+          search: debouncedSearch 
+        });
+        setAllProducts(res.data.data?.content || []);
+      } catch { 
+        toast.error('Failed to load products'); 
+      } finally { 
+        setLoadingProducts(false); 
+      }
+    };
+
+    fetchProductsForPicker();
+  }, [debouncedSearch, pickerSection]);
+
   const openCreate = () => { setEditing(null); setForm(emptyForm); setShowModal(true); };
+  
   const openEdit = (s) => {
     setEditing(s);
     setForm({ title: s.title, subtitle: s.subtitle || '', type: s.type, displayOrder: s.displayOrder, isActive: s.isActive, viewAllUrl: s.viewAllUrl || '' });
     setShowModal(true);
   };
+  
   const closeModal = () => { setShowModal(false); setEditing(null); };
 
   const handleSave = async (e) => {
@@ -73,15 +114,12 @@ const AdminHomeSections = () => {
   };
 
   // ── Product Picker ──
-  const openPicker = async (section) => {
+  const openPicker = (section) => {
     setPickerSection(section);
     setProductSearch('');
-    setLoadingProducts(true);
-    try {
-      const res = await productApi.getAllAdmin({ page: 0, size: 100 });
-      setAllProducts(res.data.data?.content || []);
-    } catch { toast.error('Failed to load products'); }
-    finally { setLoadingProducts(false); }
+    // CHANGED: Also reset the debounced search when opening the picker
+    setDebouncedSearch('');
+    // CHANGED: Removed the initial API fetch from here; it's now handled by the useEffect above.
   };
 
   const closePicker = () => { setPickerSection(null); setAllProducts([]); };
@@ -90,7 +128,6 @@ const AdminHomeSections = () => {
     try {
       await homeSectionApi.addProduct(pickerSection.id, productId);
       toast.success('Product added!');
-      // Refresh section in list
       const res = await homeSectionApi.getAll();
       const updated = (res.data.data || []).find(s => s.id === pickerSection.id);
       setPickerSection(updated);
@@ -111,9 +148,17 @@ const AdminHomeSections = () => {
 
   const sectionProductIds = new Set(pickerSection?.products?.map(p => p.id) || []);
 
-  const filteredProducts = allProducts.filter(p =>
-    p.name.toLowerCase().includes(productSearch.toLowerCase())
-  );
+  // CHANGED: Enhanced client-side filtering as a fallback in case the API doesn't fully support the search param yet.
+  // Now searches name, category name, id, and sku.
+  const filteredProducts = allProducts.filter(p => {
+    const term = productSearch.toLowerCase();
+    return (
+      p.name?.toLowerCase().includes(term) ||
+      p.category?.name?.toLowerCase().includes(term) ||
+      p.id?.toString().includes(term) ||
+      p.sku?.toLowerCase().includes(term)
+    );
+  });
 
   if (loading) return <AdminLayout><Loader /></AdminLayout>;
 
@@ -295,8 +340,9 @@ const AdminHomeSections = () => {
                 <p className="form-label" style={{ marginBottom: 8 }}>Add Products</p>
                 <div style={{ position: 'relative' }}>
                   <MdSearch size={18} style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }} />
+                  {/* CHANGED: Updated placeholder text to reflect the enhanced client-side search */}
                   <input className="form-input" style={{ paddingLeft: 36 }}
-                    placeholder="Search products..."
+                    placeholder="Search by name, category, or ID..."
                     value={productSearch}
                     onChange={e => setProductSearch(e.target.value)} />
                 </div>

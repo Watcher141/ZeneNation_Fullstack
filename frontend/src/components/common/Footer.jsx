@@ -36,7 +36,7 @@ const Footer = () => {
   return (
     <footer className="footer">
 
-      {/* ── Newsletter Strip ── */}
+      {/* ── Newsletter Strip (UNCHANGED) ── */}
       <div className="footer-newsletter">
         <div className="container newsletter-inner">
           <div className="newsletter-text">
@@ -77,34 +77,49 @@ const Footer = () => {
         </div>
       </div>
 
-      {/* ── Main Footer ── */}
-      <div className="container footer-inner">
-        <div className="footer-brand">
-          <Link to="/" className="footer-logo">
-            <span className="logo-zen">ZENE</span>
-            <span className="logo-nation">NATION</span>
+      {/* ── Main Footer (UPDATED: IMAGE LOGO & GROUPED LINKS) ── */}
+      <div className="container footer-inner-compact">
+        <div className="footer-brand-compact">
+          <Link to="/" className="footer-logo" style={{ display: 'inline-block', marginBottom: '8px' }}>
+            <img 
+              src="/button1.png" 
+              alt="Zenenation Logo" 
+              style={{ 
+                height: '140px',          
+                width: 'auto', 
+                objectFit: 'contain',
+                transform: 'scale(1.6)', 
+                transformOrigin: 'left center' 
+              }} 
+            />
           </Link>
           <p className="footer-tagline">Your ultimate anime merchandise destination</p>
         </div>
 
-        <div className="footer-links">
-          <div className="footer-col">
-            <h4>Shop</h4>
-            <Link to="/products">All Products</Link>
-            <Link to="/products?sortBy=createdAt&sortDir=desc">New Arrivals</Link>
-            <Link to="/search?keyword=figure">Figures</Link>
-            <Link to="/search?keyword=katana">Katana</Link>
+        <div className="footer-rows">
+          <div className="footer-row">
+            <span className="footer-row-title">Shop:</span>
+            <div className="footer-links-group">
+              <Link to="/products">All Products</Link>
+              <Link to="/products?sortBy=createdAt&sortDir=desc">New Arrivals</Link>
+              <Link to="/search?keyword=figure">Figures</Link>
+              <Link to="/search?keyword=katana">Katana</Link>
+            </div>
           </div>
-          <div className="footer-col">
-            <h4>Account</h4>
-            <Link to="/profile">My Profile</Link>
-            <Link to="/orders">My Orders</Link>
-            <Link to="/cart">Cart</Link>
+          <div className="footer-row">
+            <span className="footer-row-title">Account:</span>
+            <div className="footer-links-group">
+              <Link to="/profile">My Profile</Link>
+              <Link to="/orders">My Orders</Link>
+              <Link to="/cart">Cart</Link>
+            </div>
           </div>
-          <div className="footer-col">
-            <h4>Support</h4>
-            <Link to="/forgot-password">Forgot Password</Link>
-            <a href="mailto:support@zenenation.com">Contact Us</a>
+          <div className="footer-row">
+            <span className="footer-row-title">Support:</span>
+            <div className="footer-links-group">
+              <Link to="/forgot-password">Forgot Password</Link>
+              <a href="mailto:support@zenenation.com">Contact Us</a>
+            </div>
           </div>
         </div>
       </div>
