@@ -26,7 +26,6 @@ const AdminProducts = () => {
   const [page, setPage] = useState(0);
   const [imageModal, setImageModal] = useState(null);
 
-  // ── Filters ──
   const [filterCategory, setFilterCategory] = useState('');
   const [filterStatus, setFilterStatus] = useState('');
   const [filterSearch, setFilterSearch] = useState('');
@@ -47,7 +46,6 @@ const AdminProducts = () => {
 
   useEffect(() => { fetchProducts(); }, [fetchProducts]);
 
-  // ── When editing, populate subcategories too ──
   const openCreate = () => {
     setEditing(null);
     setForm(emptyForm);
@@ -55,56 +53,69 @@ const AdminProducts = () => {
     setShowModal(true);
   };
 
-  const openEdit = async (p) => {
-    setEditing(p);
-    setShowModal(true);
+const openEdit = async (p) => {
+  setEditing(p);
+  setShowModal(true);
 
-    // Fetch full product details to get description (list API may truncate it)
-    try {
-      const res = await productApi.getById(p.id);
-      const full = res.data.data;
-      const parentId = full.category?.parentId || null;
-      const catId = parentId ? String(parentId) : String(full.category?.id || '');
-      const subId = parentId ? String(full.category?.id || '') : '';
+  try {
+    const res = await productApi.getById(p.id);
+    const full = res.data.data;
 
-      setForm({
-        name: full.name, description: full.description || '', tagline: full.tagline || '',
-        price: full.price, discountPercent: full.discountPercent || '0',
-        stockQuantity: full.stockQuantity, weightGrams: full.weightGrams || '0',
-        categoryId: catId, subcategoryId: subId,
-        isActive: full.isActive, isPreorder: full.isPreorder || false,
-        estimatedShipDate: full.estimatedShipDate || '', preorderNote: full.preorderNote || '',
-      });
-    } catch {
-      // Fallback to list data if detail fetch fails
-      const parentId = p.category?.parentId || null;
-      const catId = parentId ? String(parentId) : String(p.category?.id || '');
-      const subId = parentId ? String(p.category?.id || '') : '';
-      setForm({
-        name: p.name, description: p.description || '', tagline: p.tagline || '',
-        price: p.price, discountPercent: p.discountPercent || '0',
-        stockQuantity: p.stockQuantity, weightGrams: p.weightGrams || '0',
-        categoryId: catId, subcategoryId: subId,
-        isActive: p.isActive, isPreorder: p.isPreorder || false,
-        estimatedShipDate: p.estimatedShipDate || '', preorderNote: p.preorderNote || '',
-      });
+    console.log('CATEGORY:', JSON.stringify(full.category, null, 2));
+
+    const productCatId = full.category?.id;
+
+    // Check if this category id exists as a subcategory inside any parent
+    let categoryId = String(productCatId || '');
+    let subcategoryId = '';
+    let subs = [];
+
+    for (const parent of categories) {
+      const match = parent.subcategories?.find(s => String(s.id) === String(productCatId));
+      if (match) {
+        // It's a subcategory — set parent as category, this as subcategory
+        categoryId = String(parent.id);
+        subcategoryId = String(productCatId);
+        subs = parent.subcategories;
+        break;
+      }
     }
-  };
 
-  // When categoryId changes in form, update subcategories list
-  // Preserve subcategoryId if it belongs to the new category
-  useEffect(() => {
-    if (!form.categoryId) { setSubcategories([]); return; }
-    const cat = categories.find(c => c.id == form.categoryId);
-    const subs = cat?.subcategories || [];
+    // If not found as a subcategory, it's a top-level category — load its subs
+    if (!subcategoryId) {
+      const parent = categories.find(c => String(c.id) === String(productCatId));
+      subs = parent?.subcategories || [];
+    }
+
     setSubcategories(subs);
-    // If current subcategoryId doesn't belong to this category, clear it
-    if (form.subcategoryId && !subs.find(s => s.id == form.subcategoryId)) {
-      // Don't clear — it might be valid, let user decide
-    }
-  }, [form.categoryId, categories]);
 
-  const closeModal = () => { setShowModal(false); setEditing(null); setForm(emptyForm); setSubcategories([]); };
+    setForm({
+      name:              full.name              || '',
+      description:       full.description       || '',
+      tagline:           full.tagline           || '',
+      price:             String(full.price      || ''),
+      discountPercent:   String(full.discountPercent || 0),
+      stockQuantity:     String(full.stockQuantity   || ''),
+      weightGrams:       String(full.weightGrams     || 0),
+      categoryId,
+      subcategoryId,
+      isActive:          full.isActive          ?? true,
+      isPreorder:        full.isPreorder        || false,
+      estimatedShipDate: full.estimatedShipDate || '',
+      preorderNote:      full.preorderNote      || '',
+    });
+  } catch (err) {
+    toast.error('Failed to load product');
+    console.error(err);
+  }
+};
+
+  const closeModal = () => {
+    setShowModal(false);
+    setEditing(null);
+    setForm(emptyForm);
+    setSubcategories([]);
+  };
 
   const handleSave = async (e) => {
     e.preventDefault();
@@ -112,11 +123,11 @@ const AdminProducts = () => {
     try {
       const payload = {
         ...form,
-        price: Number(form.price),
+        price:           Number(form.price),
         discountPercent: Number(form.discountPercent),
-        stockQuantity: Number(form.stockQuantity),
-        weightGrams: Number(form.weightGrams || 0),
-        categoryId: Number(form.subcategoryId || form.categoryId),
+        stockQuantity:   Number(form.stockQuantity),
+        weightGrams:     Number(form.weightGrams || 0),
+        categoryId:      Number(form.subcategoryId || form.categoryId),
       };
       if (editing) {
         await productApi.update(editing.id, payload);
@@ -143,21 +154,19 @@ const AdminProducts = () => {
     catch { toast.error('Failed to update'); }
   };
 
-  const openImageModal = (p) => setImageModal({ id: p.id, images: p.images || [], name: p.name });
+  const openImageModal  = (p) => setImageModal({ id: p.id, images: p.images || [], name: p.name });
   const closeImageModal = () => { setImageModal(null); fetchProducts(); };
 
-  // ── Client-side filtering ──
   const filteredProducts = products.filter(p => {
     if (filterCategory && p.category?.id != filterCategory && p.category?.parentId != filterCategory) return false;
-    if (filterStatus === 'active' && !p.isActive) return false;
-    if (filterStatus === 'hidden' && p.isActive) return false;
-    if (filterStatus === 'preorder' && !p.isPreorder) return false;
-    if (filterStatus === 'outofstock' && p.stockQuantity > 0) return false;
+    if (filterStatus === 'active'     && !p.isActive)         return false;
+    if (filterStatus === 'hidden'     &&  p.isActive)         return false;
+    if (filterStatus === 'preorder'   && !p.isPreorder)       return false;
+    if (filterStatus === 'outofstock' &&  p.stockQuantity > 0) return false;
     if (filterSearch && !p.name.toLowerCase().includes(filterSearch.toLowerCase())) return false;
     return true;
   });
 
-  // All categories flat (top + sub) for filter dropdown
   const allCategoriesFlat = categories.reduce((acc, cat) => {
     acc.push(cat);
     if (cat.subcategories) acc.push(...cat.subcategories);
@@ -177,15 +186,11 @@ const AdminProducts = () => {
           <button className="btn btn-primary" onClick={openCreate}>+ Add Product</button>
         </div>
 
-        {/* ── Filters ── */}
+        {/* Filters */}
         <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', marginBottom: 16 }}>
-          <input
-            className="form-input"
-            style={{ maxWidth: 220, height: 36 }}
-            placeholder="🔍 Search products..."
-            value={filterSearch}
-            onChange={e => setFilterSearch(e.target.value)}
-          />
+          <input className="form-input" style={{ maxWidth: 220, height: 36 }}
+            placeholder="🔍 Search products..." value={filterSearch}
+            onChange={e => setFilterSearch(e.target.value)} />
           <select className="form-select" style={{ maxWidth: 200, height: 36 }}
             value={filterCategory} onChange={e => setFilterCategory(e.target.value)}>
             <option value="">All Categories</option>
@@ -214,7 +219,7 @@ const AdminProducts = () => {
           )}
         </div>
 
-        {/* ── Table ── */}
+        {/* Table */}
         <div className="admin-table-wrap">
           <table className="admin-table">
             <thead>
@@ -289,24 +294,18 @@ const AdminProducts = () => {
           </table>
         </div>
 
-        {/* ── Pagination — fixed ── */}
+        {/* Pagination */}
         {pagination.totalPages > 1 && (
           <div className="pagination" style={{ marginTop: 'var(--space-6)' }}>
-            <button className="btn btn-ghost btn-sm"
-              disabled={page === 0}
-              onClick={() => setPage(p => Math.max(0, p - 1))}>
-              ← Prev
-            </button>
+            <button className="btn btn-ghost btn-sm" disabled={page === 0}
+              onClick={() => setPage(p => Math.max(0, p - 1))}>← Prev</button>
             <span className="text-muted text-sm">Page {page + 1} of {pagination.totalPages}</span>
-            <button className="btn btn-ghost btn-sm"
-              disabled={page >= pagination.totalPages - 1}
-              onClick={() => setPage(p => Math.min(pagination.totalPages - 1, p + 1))}>
-              Next →
-            </button>
+            <button className="btn btn-ghost btn-sm" disabled={page >= pagination.totalPages - 1}
+              onClick={() => setPage(p => Math.min(pagination.totalPages - 1, p + 1))}>Next →</button>
           </div>
         )}
 
-        {/* ── Add/Edit Modal ── */}
+        {/* Add/Edit Modal */}
         {showModal && (
           <div className="modal-overlay" onClick={closeModal}>
             <div className="modal" style={{ maxWidth: 640 }} onClick={e => e.stopPropagation()}>
@@ -318,59 +317,73 @@ const AdminProducts = () => {
                 <div className="modal-body">
                   <div className="form-group">
                     <label className="form-label">Product Name *</label>
-                    <input className="form-input" value={form.name}
-                      onChange={e => setForm({ ...form, name: e.target.value })} required placeholder="e.g. Naruto Figure 30cm" />
+                    <input className="form-input" value={form.name} required
+                      onChange={e => setForm({ ...form, name: e.target.value })}
+                      placeholder="e.g. Naruto Figure 30cm" />
                   </div>
                   <div className="form-group">
                     <label className="form-label">Description *</label>
-                    <textarea className="form-input" rows={3} value={form.description}
-                      onChange={e => setForm({ ...form, description: e.target.value })} required
+                    <textarea className="form-input" rows={3} value={form.description} required
+                      onChange={e => setForm({ ...form, description: e.target.value })}
                       placeholder="Product description..." style={{ resize: 'vertical' }} />
                   </div>
                   <div className="form-group">
-                    <label className="form-label">Tagline <span className="text-muted" style={{fontWeight:400}}>(optional)</span></label>
-                    <input className="form-input" value={form.tagline}
+                    <label className="form-label">
+                      Tagline <span className="text-muted" style={{ fontWeight: 400 }}>(optional)</span>
+                    </label>
+                    <input className="form-input" value={form.tagline} maxLength={200}
                       onChange={e => setForm({ ...form, tagline: e.target.value })}
-                      placeholder='e.g. "Believe it! — Limited Edition"' maxLength={200} />
+                      placeholder='e.g. "Believe it! — Limited Edition"' />
                   </div>
 
                   <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 'var(--space-4)' }}>
                     <div className="form-group">
                       <label className="form-label">Price (₹) *</label>
-                      <input className="form-input" type="number" min="0" step="0.01" value={form.price}
-                        onChange={e => setForm({ ...form, price: e.target.value })} required placeholder="999" />
+                      <input className="form-input" type="number" min="0" step="0.01"
+                        value={form.price} required placeholder="999"
+                        onChange={e => setForm({ ...form, price: e.target.value })} />
                     </div>
                     <div className="form-group">
                       <label className="form-label">Discount %</label>
-                      <input className="form-input" type="number" min="0" max="100" value={form.discountPercent}
-                        onChange={e => setForm({ ...form, discountPercent: e.target.value })} placeholder="0" />
+                      <input className="form-input" type="number" min="0" max="100"
+                        value={form.discountPercent} placeholder="0"
+                        onChange={e => setForm({ ...form, discountPercent: e.target.value })} />
                     </div>
                     <div className="form-group">
                       <label className="form-label">Stock Quantity *</label>
-                      <input className="form-input" type="number" min="0" value={form.stockQuantity}
-                        onChange={e => setForm({ ...form, stockQuantity: e.target.value })} required placeholder="50" />
+                      <input className="form-input" type="number" min="0"
+                        value={form.stockQuantity} required placeholder="50"
+                        onChange={e => setForm({ ...form, stockQuantity: e.target.value })} />
                     </div>
                     <div className="form-group">
                       <label className="form-label">Weight (grams)</label>
-                      <input className="form-input" type="number" min="0" value={form.weightGrams}
-                        onChange={e => setForm({ ...form, weightGrams: e.target.value })} placeholder="250" />
+                      <input className="form-input" type="number" min="0"
+                        value={form.weightGrams} placeholder="250"
+                        onChange={e => setForm({ ...form, weightGrams: e.target.value })} />
                     </div>
 
-                    {/* ── Category ── */}
+                    {/* Category */}
                     <div className="form-group">
                       <label className="form-label">Category *</label>
-                      <select className="form-select" value={form.categoryId}
+                      <select
+                        className="form-select"
+                        value={String(form.categoryId || '')}
                         onChange={e => {
-                          const cat = categories.find(c => c.id == e.target.value);
+                          const categoryId = e.target.value;
+                          const cat = categories.find(c => String(c.id) === categoryId);
                           setSubcategories(cat?.subcategories || []);
-                          setForm({ ...form, categoryId: e.target.value, subcategoryId: '' });
-                        }} required>
+                          setForm(prev => ({ ...prev, categoryId, subcategoryId: '' }));
+                        }}
+                        required
+                      >
                         <option value="">Select category</option>
-                        {categories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+                        {categories.map(c => (
+                          <option key={c.id} value={String(c.id)}>{c.name}</option>
+                        ))}
                       </select>
                     </div>
 
-                    {/* ── Subcategory — shown only when parent has subcategories ── */}
+                    {/* Subcategory */}
                     {subcategories.length > 0 && (
                       <div className="form-group" style={{ gridColumn: '1 / -1' }}>
                         <label className="form-label">
@@ -379,23 +392,28 @@ const AdminProducts = () => {
                             (optional — assign to a more specific category)
                           </span>
                         </label>
-                        <select className="form-select" value={form.subcategoryId || ''}
-                          onChange={e => setForm({ ...form, subcategoryId: e.target.value })}>
+                        <select
+                          className="form-select"
+                          value={String(form.subcategoryId || '')}
+                          onChange={e => setForm(prev => ({ ...prev, subcategoryId: e.target.value }))}
+                        >
                           <option value="">— Keep in parent category —</option>
-                          {subcategories.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
+                          {subcategories.map(s => (
+                            <option key={s.id} value={String(s.id)}>{s.name}</option>
+                          ))}
                         </select>
                       </div>
                     )}
                   </div>
 
-                  {/* ── Active toggle ── */}
+                  {/* Active */}
                   <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', marginTop: 8 }}>
                     <input type="checkbox" checked={form.isActive}
                       onChange={e => setForm({ ...form, isActive: e.target.checked })} />
                     <span className="form-label" style={{ margin: 0 }}>Active (visible on website)</span>
                   </label>
 
-                  {/* ── Preorder toggle ── */}
+                  {/* Preorder */}
                   <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', marginTop: 8, background: 'rgba(245,166,35,0.08)', border: '1px solid rgba(245,166,35,0.3)', borderRadius: 'var(--radius-md)', padding: 'var(--space-3)' }}>
                     <input type="checkbox" checked={form.isPreorder}
                       onChange={e => setForm({ ...form, isPreorder: e.target.checked })} />
@@ -414,9 +432,9 @@ const AdminProducts = () => {
                       </div>
                       <div className="form-group">
                         <label className="form-label">Preorder Note</label>
-                        <input className="form-input" value={form.preorderNote}
+                        <input className="form-input" value={form.preorderNote} maxLength={300}
                           onChange={e => setForm({ ...form, preorderNote: e.target.value })}
-                          placeholder='e.g. "Ships Q2 2025 — Limited to 500 units"' maxLength={300} />
+                          placeholder='e.g. "Ships Q2 2025 — Limited to 500 units"' />
                       </div>
                     </>
                   )}
@@ -432,7 +450,7 @@ const AdminProducts = () => {
           </div>
         )}
 
-        {/* ── Image Modal ── */}
+        {/* Image Modal */}
         {imageModal && (
           <div className="modal-overlay" onClick={closeImageModal}>
             <div className="modal" style={{ maxWidth: 680, width: '95%' }} onClick={e => e.stopPropagation()}>
