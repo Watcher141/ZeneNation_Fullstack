@@ -10,6 +10,26 @@ import { MdAdd, MdEdit, MdDelete, MdVisibility, MdVisibilityOff, MdClose, MdSear
 const TYPE_OPTIONS = ['NEW_ARRIVAL', 'PREORDER', 'CUSTOM'];
 const emptyForm = { title: '', subtitle: '', type: 'CUSTOM', displayOrder: 0, isActive: true, viewAllUrl: '' };
 
+// ── Search Ranking Helper ──
+const getSearchRank = (product, search) => {
+  if (!search) return 0;
+  const term = search.toLowerCase();
+  const name = (product.name || '').toLowerCase();
+  const category = (product.category?.name || '').toLowerCase();
+  const id = String(product.id);
+
+  // Highest rank: Exact matches
+  if (name === term || id === term || product.sku?.toLowerCase() === term) return 100;
+  // High rank: Starts with search term
+  if (name.startsWith(term)) return 50;
+  // Medium rank: Contains search term in name
+  if (name.includes(term)) return 25;
+  // Low rank: Contains search term in category
+  if (category.includes(term)) return 10;
+  
+  return 0; // Default
+};
+
 const AdminHomeSections = () => {
   const [sections, setSections] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -22,10 +42,12 @@ const AdminHomeSections = () => {
   const [pickerSection, setPickerSection] = useState(null);
   const [allProducts, setAllProducts] = useState([]);
   const [productSearch, setProductSearch] = useState('');
-  
-  // CHANGED: Added state to hold the debounced search term
   const [debouncedSearch, setDebouncedSearch] = useState('');
   const [loadingProducts, setLoadingProducts] = useState(false);
+  
+  // Pagination states
+  const [pickerPage, setPickerPage] = useState(0);
+  const [hasMoreProducts, setHasMoreProducts] = useState(true);
 
   const fetchSections = useCallback(async () => {
     setLoading(true);
@@ -41,29 +63,40 @@ const AdminHomeSections = () => {
 
   useEffect(() => { fetchSections(); }, [fetchSections]);
 
-  // CHANGED: Added debounce effect. Updates `debouncedSearch` 500ms after user stops typing.
+  // Handle Search Debouncing & Page Reset
   useEffect(() => {
     const timer = setTimeout(() => {
       setDebouncedSearch(productSearch);
+      setPickerPage(0); // Reset to first page when search changes
     }, 500);
     return () => clearTimeout(timer);
   }, [productSearch]);
 
-  // CHANGED: Refactored product fetching into a useEffect that depends on `debouncedSearch`.
-  // This replaces the initial fetch that was previously inside `openPicker`.
+  // Fetch Products (Supports Initial Load, Search, and Pagination)
   useEffect(() => {
-    if (!pickerSection) return; // Only fetch if the modal is open
+    if (!pickerSection) return;
 
     const fetchProductsForPicker = async () => {
-      setLoadingProducts(true);
+      // Only show full-screen loader on the first page
+      if (pickerPage === 0) setLoadingProducts(true);
+      
       try {
-        // CHANGED: Passing the debounced search term to the API
         const res = await productApi.getAllAdmin({ 
-          page: 0, 
-          size: 100, 
+          page: pickerPage, 
+          size: 50, // Optimal chunk size for performance
           search: debouncedSearch 
         });
-        setAllProducts(res.data.data?.content || []);
+        
+        const newProducts = res.data.data?.content || [];
+        
+        if (pickerPage === 0) {
+          setAllProducts(newProducts);
+        } else {
+          setAllProducts(prev => [...prev, ...newProducts]);
+        }
+
+        // Check if there are more products to load based on chunk size
+        setHasMoreProducts(newProducts.length === 50); 
       } catch { 
         toast.error('Failed to load products'); 
       } finally { 
@@ -72,8 +105,9 @@ const AdminHomeSections = () => {
     };
 
     fetchProductsForPicker();
-  }, [debouncedSearch, pickerSection]);
+  }, [debouncedSearch, pickerSection, pickerPage]);
 
+  // ── Section Handlers ──
   const openCreate = () => { setEditing(null); setForm(emptyForm); setShowModal(true); };
   
   const openEdit = (s) => {
@@ -113,16 +147,20 @@ const AdminHomeSections = () => {
     catch { toast.error('Failed to toggle'); }
   };
 
-  // ── Product Picker ──
+  // ── Product Picker Handlers ──
   const openPicker = (section) => {
     setPickerSection(section);
     setProductSearch('');
-    // CHANGED: Also reset the debounced search when opening the picker
     setDebouncedSearch('');
-    // CHANGED: Removed the initial API fetch from here; it's now handled by the useEffect above.
+    setPickerPage(0);
+    setAllProducts([]);
+    setHasMoreProducts(true);
   };
 
-  const closePicker = () => { setPickerSection(null); setAllProducts([]); };
+  const closePicker = () => { 
+    setPickerSection(null); 
+    setAllProducts([]); 
+  };
 
   const handleAddProduct = async (productId) => {
     try {
@@ -147,18 +185,6 @@ const AdminHomeSections = () => {
   };
 
   const sectionProductIds = new Set(pickerSection?.products?.map(p => p.id) || []);
-
-  // CHANGED: Enhanced client-side filtering as a fallback in case the API doesn't fully support the search param yet.
-  // Now searches name, category name, id, and sku.
-  const filteredProducts = allProducts.filter(p => {
-    const term = productSearch.toLowerCase();
-    return (
-      p.name?.toLowerCase().includes(term) ||
-      p.category?.name?.toLowerCase().includes(term) ||
-      p.id?.toString().includes(term) ||
-      p.sku?.toLowerCase().includes(term)
-    );
-  });
 
   if (loading) return <AdminLayout><Loader /></AdminLayout>;
 
@@ -337,47 +363,63 @@ const AdminHomeSections = () => {
 
               {/* Search & add products */}
               <div style={{ marginBottom: 12 }}>
-                <p className="form-label" style={{ marginBottom: 8 }}>Add Products</p>
+                <p className="form-label" style={{ marginBottom: 8 }}>Search Directory</p>
                 <div style={{ position: 'relative' }}>
                   <MdSearch size={18} style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }} />
-                  {/* CHANGED: Updated placeholder text to reflect the enhanced client-side search */}
                   <input className="form-input" style={{ paddingLeft: 36 }}
-                    placeholder="Search by name, category, or ID..."
+                    placeholder="Search all products by name, category, or ID..."
                     value={productSearch}
                     onChange={e => setProductSearch(e.target.value)} />
                 </div>
               </div>
 
-              {loadingProducts ? <Loader /> : (
+              {loadingProducts && pickerPage === 0 ? <Loader /> : (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 6, maxHeight: 340, overflowY: 'auto' }}>
-                  {filteredProducts.map(p => {
-                    const inSection = sectionProductIds.has(p.id);
-                    return (
-                      <div key={p.id} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '8px 12px', borderRadius: 8, background: inSection ? 'rgba(76,175,80,0.06)' : 'var(--bg-tertiary)', border: `1px solid ${inSection ? 'rgba(76,175,80,0.2)' : 'var(--border-color)'}` }}>
-                        {p.primaryImageUrl
-                          ? <img src={p.primaryImageUrl} alt={p.name} style={{ width: 40, height: 40, borderRadius: 6, objectFit: 'cover', flexShrink: 0 }} />
-                          : <div style={{ width: 40, height: 40, borderRadius: 6, background: 'var(--bg-secondary)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>🎌</div>
-                        }
-                        <div style={{ flex: 1, minWidth: 0 }}>
-                          <p style={{ margin: 0, fontSize: 14, color: 'var(--text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{p.name}</p>
-                          <p style={{ margin: 0, fontSize: 12, color: 'var(--text-muted)' }}>₹{p.discountedPrice || p.price} · {p.category?.name}</p>
+                  {[...allProducts]
+                    .sort((a, b) => {
+                      if (!debouncedSearch) return 0;
+                      return getSearchRank(b, debouncedSearch) - getSearchRank(a, debouncedSearch);
+                    })
+                    .map(p => {
+                      const inSection = sectionProductIds.has(p.id);
+                      return (
+                        <div key={p.id} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '8px 12px', borderRadius: 8, background: inSection ? 'rgba(76,175,80,0.06)' : 'var(--bg-tertiary)', border: `1px solid ${inSection ? 'rgba(76,175,80,0.2)' : 'var(--border-color)'}` }}>
+                          {p.primaryImageUrl
+                            ? <img src={p.primaryImageUrl} alt={p.name} style={{ width: 40, height: 40, borderRadius: 6, objectFit: 'cover', flexShrink: 0 }} />
+                            : <div style={{ width: 40, height: 40, borderRadius: 6, background: 'var(--bg-secondary)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>🎌</div>
+                          }
+                          <div style={{ flex: 1, minWidth: 0 }}>
+                            <p style={{ margin: 0, fontSize: 14, color: 'var(--text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{p.name}</p>
+                            <p style={{ margin: 0, fontSize: 12, color: 'var(--text-muted)' }}>₹{p.discountedPrice || p.price} · {p.category?.name}</p>
+                          </div>
+                          {inSection ? (
+                            <button className="btn btn-ghost btn-sm" style={{ color: 'var(--accent-red)', flexShrink: 0 }}
+                              onClick={() => handleRemoveProduct(p.id)}>
+                              Remove
+                            </button>
+                          ) : (
+                            <button className="btn btn-ghost btn-sm" style={{ color: 'var(--accent-primary)', flexShrink: 0 }}
+                              onClick={() => handleAddProduct(p.id)}>
+                              + Add
+                            </button>
+                          )}
                         </div>
-                        {inSection ? (
-                          <button className="btn btn-ghost btn-sm" style={{ color: 'var(--accent-red)', flexShrink: 0 }}
-                            onClick={() => handleRemoveProduct(p.id)}>
-                            Remove
-                          </button>
-                        ) : (
-                          <button className="btn btn-ghost btn-sm" style={{ color: 'var(--accent-primary)', flexShrink: 0 }}
-                            onClick={() => handleAddProduct(p.id)}>
-                            + Add
-                          </button>
-                        )}
-                      </div>
-                    );
-                  })}
-                  {filteredProducts.length === 0 && (
+                      );
+                    })}
+                  
+                  {allProducts.length === 0 && (
                     <p style={{ textAlign: 'center', color: 'var(--text-muted)', padding: 24 }}>No products found</p>
+                  )}
+
+                  {hasMoreProducts && allProducts.length > 0 && (
+                    <button 
+                      className="btn btn-ghost" 
+                      style={{ marginTop: 12, padding: 12, width: '100%', border: '1px dashed var(--border-color)' }}
+                      onClick={() => setPickerPage(prev => prev + 1)}
+                      disabled={loadingProducts}
+                    >
+                      {loadingProducts ? 'Loading...' : 'Load More Products'}
+                    </button>
                   )}
                 </div>
               )}
