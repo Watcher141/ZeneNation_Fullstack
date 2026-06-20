@@ -69,8 +69,33 @@ public class EmailServiceImpl implements EmailService {
     @Override
     @Async
     public void sendOrderConfirmationEmail(String toEmail, String orderNumber, String totalAmount) {
-        sendEmail(toEmail, "Order Confirmed — " + orderNumber,
+        sendEmail(toEmail, "Order Confirmed ✅ — " + orderNumber,
                 buildOrderConfirmationEmailBody(orderNumber, totalAmount));
+    }
+
+    // -------------------------------------------------------------------------
+    // NEW ORDER — ADMIN NOTIFICATION
+    // -------------------------------------------------------------------------
+
+    @Override
+    @Async
+    public void sendNewOrderAdminEmail(String adminEmail, String orderNumber,
+                                       String customerName, String totalAmount,
+                                       String paymentMethod) {
+        sendEmail(adminEmail, "🛒 New Order Received — " + orderNumber,
+                buildNewOrderAdminEmailBody(orderNumber, customerName, totalAmount, paymentMethod));
+    }
+
+    // -------------------------------------------------------------------------
+    // ORDER CANCELLATION — ADMIN NOTIFICATION
+    // -------------------------------------------------------------------------
+
+    @Override
+    @Async
+    public void sendOrderCancellationAdminEmail(String adminEmail, String orderNumber,
+                                                String customerName, String totalAmount) {
+        sendEmail(adminEmail, "❌ Order Cancelled — " + orderNumber,
+                buildOrderCancellationAdminEmailBody(orderNumber, customerName, totalAmount));
     }
 
     // -------------------------------------------------------------------------
@@ -164,6 +189,7 @@ public class EmailServiceImpl implements EmailService {
     }
 
     private String buildOrderConfirmationEmailBody(String orderNumber, String totalAmount) {
+        String ordersUrl = frontendUrl + "/orders";
         return """
             <!DOCTYPE html><html><head><meta charset="UTF-8">
             <style>
@@ -171,22 +197,66 @@ public class EmailServiceImpl implements EmailService {
                 .container{max-width:600px;margin:40px auto;background:white;border-radius:8px;overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,.1)}
                 .header{background:#1a1a2e;color:white;padding:30px;text-align:center}
                 .body{padding:40px 30px;color:#333}
-                .order-box{background:#f9f9f9;border:1px solid #eee;border-radius:6px;padding:20px;margin:20px 0}
+                .order-box{background:#f9f9f9;border:1px solid #eee;border-left:4px solid #e94560;border-radius:6px;padding:20px;margin:20px 0}
+                .order-box p{margin:6px 0;font-size:15px}
+                .btn{display:inline-block;background:#e94560;color:white;padding:14px 32px;border-radius:6px;text-decoration:none;font-weight:bold;font-size:16px;margin:20px 0}
                 .footer{background:#f4f4f4;padding:20px;text-align:center;font-size:12px;color:#aaa}
             </style></head><body>
             <div class="container">
-                <div class="header"><h1>Order Confirmed!</h1></div>
+                <div class="header"><h1>🎉 Order Confirmed!</h1><p style="margin:4px 0;opacity:.8">Zenenation</p></div>
                 <div class="body">
-                    <p>Thank you for your order!</p>
+                    <p>Thank you for your order! We've received it and it's being processed.</p>
                     <div class="order-box">
                         <p><strong>Order Number:</strong> %s</p>
-                        <p><strong>Total Amount:</strong> Rs.%s</p>
+                        <p><strong>Total Amount:</strong> ₹%s</p>
                     </div>
-                    <p>We'll notify you once your order is shipped.</p>
+                    <p>We'll send you another email as soon as your order is shipped. You can track your order anytime:</p>
+                    <a href="%s" class="btn">View My Orders</a>
+                    <p style="font-size:13px;color:#888">If you have any questions, reply to this email or contact our support team.</p>
                 </div>
                 <div class="footer">&copy; 2025 Zenenation. All rights reserved.</div>
             </div></body></html>
-            """.formatted(orderNumber, totalAmount);
+            """.formatted(orderNumber, totalAmount, ordersUrl);
+    }
+
+    private String buildNewOrderAdminEmailBody(String orderNumber, String customerName,
+                                               String totalAmount, String paymentMethod) {
+        String adminOrdersUrl = frontendUrl + "/admin/orders";
+        return """
+            <!DOCTYPE html><html><head><meta charset="UTF-8">
+            <style>
+                body{font-family:Arial,sans-serif;background:#f4f4f4;margin:0;padding:0}
+                .container{max-width:600px;margin:40px auto;background:white;border-radius:8px;overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,.1)}
+                .header{background:#0f3460;color:white;padding:30px;text-align:center}
+                .body{padding:40px 30px;color:#333}
+                .order-box{background:#f0f4ff;border:1px solid #c5d5f5;border-left:4px solid #0f3460;border-radius:6px;padding:20px;margin:20px 0}
+                .order-box p{margin:8px 0;font-size:15px}
+                .badge{display:inline-block;padding:4px 12px;border-radius:20px;font-size:12px;font-weight:bold;margin-top:4px}
+                .badge-cod{background:#fff3cd;color:#856404}
+                .badge-online{background:#d1fae5;color:#065f46}
+                .btn{display:inline-block;background:#0f3460;color:white;padding:14px 32px;border-radius:6px;text-decoration:none;font-weight:bold;font-size:16px;margin:20px 0}
+                .footer{background:#f4f4f4;padding:20px;text-align:center;font-size:12px;color:#aaa}
+            </style></head><body>
+            <div class="container">
+                <div class="header"><h1>🛒 New Order Received!</h1><p style="margin:4px 0;opacity:.8">Zenenation Admin</p></div>
+                <div class="body">
+                    <p>A new order has been placed on your store.</p>
+                    <div class="order-box">
+                        <p><strong>Order Number:</strong> %s</p>
+                        <p><strong>Customer:</strong> %s</p>
+                        <p><strong>Total Amount:</strong> ₹%s</p>
+                        <p><strong>Payment:</strong> <span class="badge %s">%s</span></p>
+                    </div>
+                    <a href="%s" class="btn">View Orders Dashboard</a>
+                </div>
+                <div class="footer">&copy; 2025 Zenenation Admin Panel. All rights reserved.</div>
+            </div></body></html>
+            """.formatted(
+                orderNumber, customerName, totalAmount,
+                "COD".equals(paymentMethod) ? "badge-cod" : "badge-online",
+                "COD".equals(paymentMethod) ? "Cash on Delivery" : "Online Payment",
+                adminOrdersUrl
+        );
     }
 
     private String buildAbandonedCartBody(String userName, int itemCount, double cartTotal) {
@@ -301,5 +371,37 @@ public class EmailServiceImpl implements EmailService {
                 <div class="footer">&copy; 2025 Zenenation. All rights reserved.</div>
             </div></body></html>
             """.formatted(name, couponCode, expiryDays, shopUrl);
+    }
+
+    private String buildOrderCancellationAdminEmailBody(String orderNumber,
+                                                         String customerName,
+                                                         String totalAmount) {
+        String adminOrdersUrl = frontendUrl + "/admin/orders";
+        return """
+            <!DOCTYPE html><html><head><meta charset="UTF-8">
+            <style>
+                body{font-family:Arial,sans-serif;background:#f4f4f4;margin:0;padding:0}
+                .container{max-width:600px;margin:40px auto;background:white;border-radius:8px;overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,.1)}
+                .header{background:#7f1d1d;color:white;padding:30px;text-align:center}
+                .body{padding:40px 30px;color:#333}
+                .order-box{background:#fff5f5;border:1px solid #fecaca;border-left:4px solid #dc2626;border-radius:6px;padding:20px;margin:20px 0}
+                .order-box p{margin:8px 0;font-size:15px}
+                .btn{display:inline-block;background:#7f1d1d;color:white;padding:14px 32px;border-radius:6px;text-decoration:none;font-weight:bold;font-size:16px;margin:20px 0}
+                .footer{background:#f4f4f4;padding:20px;text-align:center;font-size:12px;color:#aaa}
+            </style></head><body>
+            <div class="container">
+                <div class="header"><h1>❌ Order Cancelled</h1><p style="margin:4px 0;opacity:.8">Zenenation Admin</p></div>
+                <div class="body">
+                    <p>A customer has cancelled their order. Please update your inventory or records if needed.</p>
+                    <div class="order-box">
+                        <p><strong>Order Number:</strong> %s</p>
+                        <p><strong>Customer:</strong> %s</p>
+                        <p><strong>Order Value:</strong> ₹%s</p>
+                    </div>
+                    <a href="%s" class="btn">View Orders Dashboard</a>
+                </div>
+                <div class="footer">&copy; 2025 Zenenation Admin Panel. All rights reserved.</div>
+            </div></body></html>
+            """.formatted(orderNumber, customerName, totalAmount, adminOrdersUrl);
     }
 }

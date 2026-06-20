@@ -19,6 +19,7 @@ import com.zenenation.backend.exception.PaymentException;
 import com.zenenation.backend.exception.ResourceNotFoundException;
 import com.zenenation.backend.repository.*;
 import com.zenenation.backend.service.CouponService;
+import com.zenenation.backend.service.EmailService;
 import com.zenenation.backend.service.OrderService;
 import com.zenenation.backend.service.RewardService;
 import com.zenenation.backend.service.ShippingConfigService;
@@ -83,6 +84,7 @@ public class OrderServiceImpl implements OrderService {
     private final RewardService rewardService;
     private final ShippingConfigService shippingConfigService;
     private final AppProperties appProperties;
+    private final EmailService emailService;
 
     @Value("${razorpay.key-id}")
     private String razorpayKeyId;
@@ -305,6 +307,22 @@ public class OrderServiceImpl implements OrderService {
         log.info("Order placed: orderId={}, orderNumber={}, userId={}, method={}",
                 order.getId(), order.getOrderNumber(), user.getId(), request.getPaymentMethod());
 
+        // ── 9. Send emails (async — never blocks the HTTP response) ──────
+        // Customer: order confirmation
+        emailService.sendOrderConfirmationEmail(
+                user.getEmail(),
+                order.getOrderNumber(),
+                totalAmount.toPlainString()
+        );
+        // Admin: new order notification
+        emailService.sendNewOrderAdminEmail(
+                appProperties.getAdmin().getEmail(),
+                order.getOrderNumber(),
+                user.getName(),
+                totalAmount.toPlainString(),
+                request.getPaymentMethod().name()
+        );
+
         // Build response with razorpayOrderId so frontend can open payment modal
         OrderResponse response = toOrderResponse(order, orderItems, payment, user);
         response.setRazorpayOrderId(razorpayOrderId);
@@ -351,7 +369,10 @@ public class OrderServiceImpl implements OrderService {
                 || order.getStatus() == OrderStatus.DELIVERED
                 || order.getStatus() == OrderStatus.CANCELLED) {
             throw new BadRequestException(
-                    "Order cannot be cancelled. Current status: " + order.getStatus()
+                    "This order cannot be cancelled because it has already been " +
+                    order.getStatus().name().toLowerCase() + ". " +
+                    "Once an order is shipped, cancellation is not possible. " +
+                    "Please contact us at zenenationstore@gmail.com for further assistance."
             );
         }
 
@@ -369,6 +390,14 @@ public class OrderServiceImpl implements OrderService {
 
         order = orderRepository.save(order);
         log.info("Order cancelled: orderId={}, userId={}", orderId, user.getId());
+
+        // Notify admin of cancellation (async — never blocks response)
+        emailService.sendOrderCancellationAdminEmail(
+                appProperties.getAdmin().getEmail(),
+                order.getOrderNumber(),
+                user.getName(),
+                order.getTotalAmount().toPlainString()
+        );
 
         Payment payment = paymentRepository.findByOrderId(orderId).orElse(null);
         return toOrderResponse(order, items, payment, user);

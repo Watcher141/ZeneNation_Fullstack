@@ -177,7 +177,7 @@ app:
     redirect-uri: ${OAUTH2_REDIRECT_URI:http://localhost:5173/oauth2/callback}
 
   admin:
-    email:    ${ADMIN_EMAIL:admin@zenenation.com}
+    email:    ${ADMIN_EMAIL:zenenationstore@gmail.com}
     password: ${ADMIN_PASSWORD:changeme}
 
   pagination:

@@ -54,6 +54,30 @@ const OrdersPage = () => {
       <div className="container orders-page">
         <h1 className="orders-title">My Orders</h1>
 
+        {/* Cancellation policy notice */}
+        <div style={{
+          background: 'rgba(233,69,96,0.08)',
+          border: '1px solid rgba(233,69,96,0.25)',
+          borderRadius: 8,
+          padding: '10px 16px',
+          marginBottom: 'var(--space-6)',
+          fontSize: 'var(--text-sm)',
+          color: 'var(--text-muted)',
+          display: 'flex',
+          alignItems: 'center',
+          gap: 8,
+        }}>
+          <span style={{ fontSize: 18 }}>ℹ️</span>
+          <span>
+            Orders can be cancelled only before they are <strong>Shipped</strong>.
+            Once shipped, cancellation is not possible.&nbsp;
+            Need help? Email us at{' '}
+            <a href="mailto:zenenationstore@gmail.com" style={{ color: 'var(--accent-primary)' }}>
+              zenenationstore@gmail.com
+            </a>
+          </span>
+        </div>
+
         {orders.length === 0 ? (
           <div className="empty-state">
             <div className="empty-state-icon">📦</div>
@@ -113,14 +137,19 @@ const OrdersPage = () => {
                         ₹{Number(order.totalAmount).toLocaleString('en-IN')}
                       </span>
                     </div>
-                    <div style={{ display: 'flex', gap: 8 }}>
-                      {(order.status === 'PENDING' || order.status === 'CONFIRMED') && (
+                    <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                      {(order.status === 'PENDING' || order.status === 'CONFIRMED' || order.status === 'PROCESSING') && (
                         <button className="btn btn-sm"
                           style={{ background: 'rgba(244,67,54,0.1)', color: 'var(--accent-red)', border: '1px solid rgba(244,67,54,0.2)' }}
                           onClick={() => handleCancel(order.id)}
                           disabled={cancellingId === order.id}>
                           {cancellingId === order.id ? 'Cancelling...' : 'Cancel Order'}
                         </button>
+                      )}
+                      {(order.status === 'SHIPPED' || order.status === 'DELIVERED') && (
+                        <span className="text-xs text-muted" style={{ fontStyle: 'italic' }}>
+                          🔒 Cannot cancel — already {order.status.toLowerCase()}
+                        </span>
                       )}
                     </div>
                   </div>
