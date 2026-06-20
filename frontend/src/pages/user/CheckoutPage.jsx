@@ -77,7 +77,9 @@ const CheckoutPage = () => {
     : 0;
 
   const discountAmount = couponData ? Number(couponData.discountAmount) : 0;
-  const rewardsDiscount = useRewards ? redeemPoints : 0;
+  // Reward: max redeemable = 60% of balance, only if subtotal >= ₹399
+  const isRewardEligible = subtotal >= 399;
+  const rewardsDiscount = useRewards ? Math.floor(redeemPoints / 2) : 0;  // 2 pts = ₹1
   const total = Math.max(0, subtotal + deliveryCharge + codCharge - discountAmount - rewardsDiscount);
   const codLimit = 10000;
 
@@ -408,12 +410,13 @@ const CheckoutPage = () => {
               {rewardsBalance > 0 && (
                 <div className="rewards-redeem-section">
                   <div className="rewards-redeem-header">
-                    <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer' }}>
-                      <input type="checkbox" checked={useRewards}
+                    <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: isRewardEligible ? 'pointer' : 'not-allowed', opacity: isRewardEligible ? 1 : 0.5 }}>
+                      <input type="checkbox" checked={useRewards} disabled={!isRewardEligible}
                         onChange={e => {
                           setUseRewards(e.target.checked);
                           if (e.target.checked) {
-                            const max = Math.min(rewardsBalance, Math.floor((subtotal + deliveryCharge + codCharge - discountAmount) * 0.5));
+                            // 60% of balance cap
+                            const max = Math.floor(rewardsBalance * 0.60);
                             setMaxRedeemable(max);
                             setRedeemPoints(max);
                           } else {
@@ -423,15 +426,20 @@ const CheckoutPage = () => {
                       <MdCardGiftcard size={18} color="var(--accent-secondary)" />
                       <span style={{ fontWeight: 600, fontSize: 'var(--text-sm)' }}>Use Reward Points</span>
                     </label>
-                    <span className="text-xs text-muted">{rewardsBalance} pts available</span>
+                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 2 }}>
+                      <span className="text-xs text-muted">{rewardsBalance} pts available (₹{Math.floor(rewardsBalance / 2)} value)</span>
+                      {!isRewardEligible && (
+                        <span className="text-xs" style={{ color: 'var(--accent-primary)' }}>Min ₹399 order to redeem</span>
+                      )}
+                    </div>
                   </div>
-                  {useRewards && (
+                  {useRewards && isRewardEligible && (
                     <div className="rewards-redeem-input">
-                      <input type="range" min={1} max={maxRedeemable} value={redeemPoints}
+                      <input type="range" min={2} max={maxRedeemable} step={2} value={redeemPoints}
                         onChange={e => setRedeemPoints(Number(e.target.value))}
                         style={{ flex: 1, accentColor: 'var(--accent-secondary)' }} />
-                      <span className="text-gold" style={{ fontWeight: 700, minWidth: 60, textAlign: 'right' }}>
-                        -{redeemPoints} pts
+                      <span className="text-gold" style={{ fontWeight: 700, minWidth: 100, textAlign: 'right', fontSize: 'var(--text-sm)' }}>
+                        {redeemPoints} pts = ₹{Math.floor(redeemPoints / 2)} off
                       </span>
                     </div>
                   )}
@@ -495,9 +503,9 @@ const CheckoutPage = () => {
                 {useRewards && redeemPoints > 0 && (
                   <div className="price-row" style={{ color: 'var(--accent-secondary)' }}>
                     <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-                      <MdCardGiftcard size={14} /> Rewards
+                      <MdCardGiftcard size={14} /> Rewards ({redeemPoints} pts)
                     </span>
-                    <span>-Rs.{redeemPoints.toLocaleString('en-IN')}</span>
+                    <span>-₹{Math.floor(redeemPoints / 2).toLocaleString('en-IN')}</span>
                   </div>
                 )}
                 <div className="divider" />

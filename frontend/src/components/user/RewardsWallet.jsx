@@ -39,7 +39,7 @@ const RewardsWallet = () => {
           <div className="rewards-card-icon"><MdCardGiftcard size={32} /></div>
           <div className="rewards-balance">{wallet?.balance || 0}</div>
           <div className="rewards-label">Available Points</div>
-          <div className="rewards-sublabel">= ₹{wallet?.balance || 0} discount</div>
+          <div className="rewards-sublabel">= ₹{Math.floor((wallet?.balance || 0) / 2)} value  <span style={{ fontSize: 11, opacity: 0.7 }}>(2 pts = ₹1)</span></div>
         </div>
         <div className="rewards-card">
           <div className="rewards-card-icon"><MdTrendingUp size={24} /></div>
@@ -57,9 +57,14 @@ const RewardsWallet = () => {
       <div className="rewards-info">
         <h4><MdCardGiftcard size={16} /> How Rewards Work</h4>
         <ul>
-          <li>Earn <strong>20% of order value</strong> as reward points after delivery</li>
-          <li><strong>1 point = ₹1</strong> discount on your next order</li>
-          <li>Redeem up to <strong>50% of order value</strong> using points</li>
+          <li>Earn <strong>20% of purchase value as points</strong> after delivery<br />
+            <span style={{ fontSize: 12, opacity: 0.8 }}>e.g. ₹500 order → 100 pts earned</span>
+          </li>
+          <li><strong>2 points = ₹1</strong> discount &nbsp;(100 pts = ₹50 value)</li>
+          <li>Redeem up to <strong>60% of your balance</strong> per order<br />
+            <span style={{ fontSize: 12, opacity: 0.8 }}>e.g. 200 pts balance → max 120 pts = ₹60 off</span>
+          </li>
+          <li>Minimum <strong>₹399 order</strong> required to redeem points</li>
           <li>Points expire after <strong>12 months</strong></li>
         </ul>
       </div>

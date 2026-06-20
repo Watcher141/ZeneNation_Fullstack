@@ -46,17 +46,20 @@ import java.util.stream.Collectors;
  *
  * 1. Load current user's cart — fail if empty
  * 2. Validate delivery address belongs to user
- * 3. COD: check order total doesn't exceed COD limit
- * 4. Validate stock for every cart item
- * 5. Calculate subtotal, delivery charge, total
- * 6. Create Order entity with address snapshot
- * 7. Create OrderItem entities (price + name snapshots)
- * 8. Decrement stock for each product
- * 9. Create Payment record
+ * 3. Validate stock for every cart item
+ * 4. Calculate subtotal, delivery charge, COD charge
+ *    4a. COD limit check
+ *    4b. Apply coupon discount if provided
+ *    4c. Apply reward points if provided (redeemPoints / 2 = rupee discount)
+ *        — Requires min ₹399 subtotal, max 60% of balance
+ * 5. Create Order entity with address snapshot
+ * 6. Create OrderItem entities (price + name snapshots)
+ * 7. Decrement stock for each product
+ * 8. Create Payment record
  *    - COD: status = PENDING
  *    - ONLINE: create Razorpay order, status = PENDING
- * 10. Clear the cart
- * 11. Return OrderResponse (includes razorpayOrderId for ONLINE)
+ * 9. Clear the cart
+ * 10. Return OrderResponse (includes razorpayOrderId for ONLINE)
  *
  * All steps wrapped in @Transactional —
  * if anything fails, entire operation rolls back.
@@ -187,6 +190,31 @@ public class OrderServiceImpl implements OrderService {
             totalAmount = PriceUtil.calculateOrderTotal(subtotal, deliveryCharge, codCharge, discountAmount);
         }
 
+        // ── 4e. Apply reward points if provided ───────────────────────────
+        // redeemPoints / 2 = rupee discount (2 pts = ₹1)
+        // Validation (min ₹399, 60% cap) is enforced inside rewardService.redeemPoints()
+        // We pass a temporary order stub for validation — actual debit happens after order save
+        int rewardPointsToRedeem = (request.getRedeemPoints() != null) ? request.getRedeemPoints() : 0;
+        BigDecimal rewardDiscountAmount = BigDecimal.ZERO;
+        if (rewardPointsToRedeem > 0) {
+            // Validate min order & cap (throws BadRequestException if invalid)
+            int maxAllowed = rewardService.getMaxRedeemablePoints(user.getId(), subtotal.doubleValue());
+            if (rewardPointsToRedeem > maxAllowed) {
+                throw new BadRequestException(
+                        "Cannot redeem more than " + maxAllowed + " reward points for this order"
+                );
+            }
+            // Discount = floor(pts / 2) rupees
+            int discountRupees = rewardPointsToRedeem / 2;
+            rewardDiscountAmount = BigDecimal.valueOf(discountRupees);
+            discountAmount = discountAmount.add(rewardDiscountAmount);
+            totalAmount = PriceUtil.calculateOrderTotal(subtotal, deliveryCharge, codCharge, discountAmount);
+            // Ensure total is never negative
+            if (totalAmount.compareTo(BigDecimal.ZERO) < 0) {
+                totalAmount = BigDecimal.ZERO;
+            }
+        }
+
         // ── 5. Create Order ───────────────────────────────────────────────
         Order order = Order.builder()
                 .orderNumber(OrderNumberUtil.generate())
@@ -212,6 +240,11 @@ public class OrderServiceImpl implements OrderService {
                 .build();
 
         order = orderRepository.save(order);
+
+        // ── 5b. Debit reward points now that order is persisted ───────────
+        if (rewardPointsToRedeem > 0) {
+            rewardService.redeemPoints(user.getId(), rewardPointsToRedeem, order);
+        }
 
         // ── 6. Create OrderItems + decrement stock ────────────────────────
         List<OrderItem> orderItems = new ArrayList<>();
