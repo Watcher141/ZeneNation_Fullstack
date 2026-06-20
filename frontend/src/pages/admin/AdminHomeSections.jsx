@@ -10,22 +10,37 @@ import { MdAdd, MdEdit, MdDelete, MdVisibility, MdVisibilityOff, MdClose, MdSear
 const TYPE_OPTIONS = ['NEW_ARRIVAL', 'PREORDER', 'CUSTOM'];
 const emptyForm = { title: '', subtitle: '', type: 'CUSTOM', displayOrder: 0, isActive: true, viewAllUrl: '' };
 
-// ── Search Ranking Helper ──
+// ── Enhanced Search Ranking Helper ──
 const getSearchRank = (product, search) => {
   if (!search) return 0;
-  const term = search.toLowerCase();
+  
+  const term = search.toLowerCase().trim();
+  if (!term) return 0;
+
   const name = (product.name || '').toLowerCase();
   const category = (product.category?.name || '').toLowerCase();
+  const sku = (product.sku || '').toLowerCase();
   const id = String(product.id);
 
-  // Highest rank: Exact matches
-  if (name === term || id === term || product.sku?.toLowerCase() === term) return 100;
-  // High rank: Starts with search term
-  if (name.startsWith(term)) return 50;
-  // Medium rank: Contains search term in name
-  if (name.includes(term)) return 25;
-  // Low rank: Contains search term in category
-  if (category.includes(term)) return 10;
+  // 1. Exact Match (Highest Priority)
+  if (name === term || id === term || sku === term) return 100;
+  
+  // 2. Starts With
+  if (name.startsWith(term) || sku.startsWith(term)) return 80;
+  
+  // 3. Contains Exact Phrase
+  if (name.includes(term)) return 60;
+  if (sku.includes(term)) return 50;
+
+  // 4. Tokenized Match (e.g. "blue shirt" matches "shirt blue mens")
+  const tokens = term.split(/\s+/);
+  if (tokens.length > 1) {
+    const matchesAllTokens = tokens.every(t => name.includes(t) || category.includes(t) || sku.includes(t));
+    if (matchesAllTokens) return 40;
+  }
+
+  // 5. Category Match
+  if (category.includes(term)) return 20;
   
   return 0; // Default
 };
@@ -66,24 +81,23 @@ const AdminHomeSections = () => {
   // Handle Search Debouncing & Page Reset
   useEffect(() => {
     const timer = setTimeout(() => {
-      setDebouncedSearch(productSearch);
-      setPickerPage(0); // Reset to first page when search changes
+      setDebouncedSearch(productSearch.trim()); 
+      setPickerPage(0); 
     }, 500);
     return () => clearTimeout(timer);
   }, [productSearch]);
 
   // Fetch Products (Supports Initial Load, Search, and Pagination)
   useEffect(() => {
-    if (!pickerSection) return;
+    if (!pickerSection?.id) return;
 
     const fetchProductsForPicker = async () => {
-      // Only show full-screen loader on the first page
       if (pickerPage === 0) setLoadingProducts(true);
       
       try {
         const res = await productApi.getAllAdmin({ 
           page: pickerPage, 
-          size: 50, // Optimal chunk size for performance
+          size: 50, 
           search: debouncedSearch 
         });
         
@@ -95,7 +109,6 @@ const AdminHomeSections = () => {
           setAllProducts(prev => [...prev, ...newProducts]);
         }
 
-        // Check if there are more products to load based on chunk size
         setHasMoreProducts(newProducts.length === 50); 
       } catch { 
         toast.error('Failed to load products'); 
@@ -105,7 +118,7 @@ const AdminHomeSections = () => {
     };
 
     fetchProductsForPicker();
-  }, [debouncedSearch, pickerSection, pickerPage]);
+  }, [debouncedSearch, pickerSection?.id, pickerPage]);
 
   // ── Section Handlers ──
   const openCreate = () => { setEditing(null); setForm(emptyForm); setShowModal(true); };
@@ -334,95 +347,104 @@ const AdminHomeSections = () => {
       {pickerSection && (
         <div className="modal-overlay" onClick={closePicker}>
           <div className="modal" style={{ maxWidth: 720, width: '95%', maxHeight: '85vh', display: 'flex', flexDirection: 'column' }} onClick={e => e.stopPropagation()}>
-            <div className="modal-header">
+            <div className="modal-header" style={{ flexShrink: 0 }}>
               <h3>Manage Products — {pickerSection.title}</h3>
               <button className="modal-close" onClick={closePicker}>✕</button>
             </div>
-            <div className="modal-body" style={{ overflow: 'auto', flex: 1 }}>
+            
+            {/* NEW: Modal Body Flex Structure */}
+            <div className="modal-body" style={{ display: 'flex', flexDirection: 'column', flex: 1, overflow: 'hidden', padding: 0 }}>
 
-              {/* Current products in section */}
-              {pickerSection.products?.length > 0 && (
-                <div style={{ marginBottom: 20 }}>
-                  <p className="form-label" style={{ marginBottom: 10 }}>
-                    In this section ({pickerSection.products.length})
-                  </p>
-                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
-                    {pickerSection.products.map(p => (
-                      <div key={p.id} style={{ display: 'flex', alignItems: 'center', gap: 8, background: 'var(--bg-tertiary)', border: '1px solid var(--border-color)', borderRadius: 8, padding: '6px 10px' }}>
-                        {p.primaryImageUrl && <img src={p.primaryImageUrl} alt={p.name} style={{ width: 32, height: 32, borderRadius: 4, objectFit: 'cover' }} />}
-                        <span style={{ fontSize: 13, color: 'var(--text-primary)', maxWidth: 140, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{p.name}</span>
-                        <button onClick={() => handleRemoveProduct(p.id)}
-                          style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--accent-red)', padding: 0, display: 'flex' }}>
-                          <MdClose size={16} />
-                        </button>
-                      </div>
-                    ))}
+              {/* Top Section: Selected items & Search Input */}
+              <div style={{ padding: '20px 20px 10px', flexShrink: 0, display: 'flex', flexDirection: 'column', gap: 16, borderBottom: '1px solid var(--border-color)' }}>
+                {pickerSection.products?.length > 0 && (
+                  <div>
+                    <p className="form-label" style={{ marginBottom: 10 }}>
+                      In this section ({pickerSection.products.length})
+                    </p>
+                    {/* Fixed Height with Internal Scroll for Selected Items */}
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, maxHeight: '140px', overflowY: 'auto', paddingRight: 4 }}>
+                      {pickerSection.products.map(p => (
+                        <div key={p.id} style={{ display: 'flex', alignItems: 'center', gap: 8, background: 'var(--bg-tertiary)', border: '1px solid var(--border-color)', borderRadius: 8, padding: '6px 10px' }}>
+                          {p.primaryImageUrl && <img src={p.primaryImageUrl} alt={p.name} style={{ width: 32, height: 32, borderRadius: 4, objectFit: 'cover' }} />}
+                          <span style={{ fontSize: 13, color: 'var(--text-primary)', maxWidth: 140, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{p.name}</span>
+                          <button onClick={() => handleRemoveProduct(p.id)}
+                            style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--accent-red)', padding: 0, display: 'flex' }}>
+                            <MdClose size={16} />
+                          </button>
+                        </div>
+                      ))}
+                    </div>
                   </div>
-                </div>
-              )}
+                )}
 
-              {/* Search & add products */}
-              <div style={{ marginBottom: 12 }}>
-                <p className="form-label" style={{ marginBottom: 8 }}>Search Directory</p>
-                <div style={{ position: 'relative' }}>
-                  <MdSearch size={18} style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }} />
-                  <input className="form-input" style={{ paddingLeft: 36 }}
-                    placeholder="Search all products by name, category, or ID..."
-                    value={productSearch}
-                    onChange={e => setProductSearch(e.target.value)} />
+                <div>
+                  <p className="form-label" style={{ marginBottom: 8 }}>Search Directory</p>
+                  <div style={{ position: 'relative' }}>
+                    <MdSearch size={18} style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }} />
+                    <input className="form-input" style={{ paddingLeft: 36 }}
+                      placeholder="Search all products by name, SKU, category, or ID..."
+                      value={productSearch}
+                      onChange={e => setProductSearch(e.target.value)} />
+                  </div>
                 </div>
               </div>
 
-              {loadingProducts && pickerPage === 0 ? <Loader /> : (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 6, maxHeight: 340, overflowY: 'auto' }}>
-                  {[...allProducts]
-                    .sort((a, b) => {
-                      if (!debouncedSearch) return 0;
-                      return getSearchRank(b, debouncedSearch) - getSearchRank(a, debouncedSearch);
-                    })
-                    .map(p => {
-                      const inSection = sectionProductIds.has(p.id);
-                      return (
-                        <div key={p.id} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '8px 12px', borderRadius: 8, background: inSection ? 'rgba(76,175,80,0.06)' : 'var(--bg-tertiary)', border: `1px solid ${inSection ? 'rgba(76,175,80,0.2)' : 'var(--border-color)'}` }}>
-                          {p.primaryImageUrl
-                            ? <img src={p.primaryImageUrl} alt={p.name} style={{ width: 40, height: 40, borderRadius: 6, objectFit: 'cover', flexShrink: 0 }} />
-                            : <div style={{ width: 40, height: 40, borderRadius: 6, background: 'var(--bg-secondary)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>🎌</div>
-                          }
-                          <div style={{ flex: 1, minWidth: 0 }}>
-                            <p style={{ margin: 0, fontSize: 14, color: 'var(--text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{p.name}</p>
-                            <p style={{ margin: 0, fontSize: 12, color: 'var(--text-muted)' }}>₹{p.discountedPrice || p.price} · {p.category?.name}</p>
+              {/* Bottom Section: Search Results (Expands to take remaining space) */}
+              <div style={{ flex: 1, overflowY: 'auto', padding: '10px 20px 20px', minHeight: 0 }}>
+                {loadingProducts && pickerPage === 0 ? <Loader /> : (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                    {[...allProducts]
+                      .sort((a, b) => {
+                        if (!debouncedSearch) return 0;
+                        return getSearchRank(b, debouncedSearch) - getSearchRank(a, debouncedSearch);
+                      })
+                      .map(p => {
+                        const inSection = sectionProductIds.has(p.id);
+                        return (
+                          <div key={p.id} style={{ flexShrink: 0, display: 'flex', alignItems: 'center', gap: 12, padding: '8px 12px', borderRadius: 8, background: inSection ? 'rgba(76,175,80,0.06)' : 'var(--bg-tertiary)', border: `1px solid ${inSection ? 'rgba(76,175,80,0.2)' : 'var(--border-color)'}` }}>
+                            {p.primaryImageUrl
+                              ? <img src={p.primaryImageUrl} alt={p.name} style={{ width: 40, height: 40, borderRadius: 6, objectFit: 'cover', flexShrink: 0 }} />
+                              : <div style={{ width: 40, height: 40, borderRadius: 6, background: 'var(--bg-secondary)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>🎌</div>
+                            }
+                            <div style={{ flex: 1, minWidth: 0 }}>
+                              <p style={{ margin: 0, fontSize: 14, color: 'var(--text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{p.name}</p>
+                              <p style={{ margin: 0, fontSize: 12, color: 'var(--text-muted)' }}>
+                                ₹{p.discountedPrice || p.price} {p.sku ? `· SKU: ${p.sku}` : ''} {p.category?.name ? `· ${p.category?.name}` : ''}
+                              </p>
+                            </div>
+                            {inSection ? (
+                              <button className="btn btn-ghost btn-sm" style={{ color: 'var(--accent-red)', flexShrink: 0 }}
+                                onClick={() => handleRemoveProduct(p.id)}>
+                                Remove
+                              </button>
+                            ) : (
+                              <button className="btn btn-ghost btn-sm" style={{ color: 'var(--accent-primary)', flexShrink: 0 }}
+                                onClick={() => handleAddProduct(p.id)}>
+                                + Add
+                              </button>
+                            )}
                           </div>
-                          {inSection ? (
-                            <button className="btn btn-ghost btn-sm" style={{ color: 'var(--accent-red)', flexShrink: 0 }}
-                              onClick={() => handleRemoveProduct(p.id)}>
-                              Remove
-                            </button>
-                          ) : (
-                            <button className="btn btn-ghost btn-sm" style={{ color: 'var(--accent-primary)', flexShrink: 0 }}
-                              onClick={() => handleAddProduct(p.id)}>
-                              + Add
-                            </button>
-                          )}
-                        </div>
-                      );
-                    })}
-                  
-                  {allProducts.length === 0 && (
-                    <p style={{ textAlign: 'center', color: 'var(--text-muted)', padding: 24 }}>No products found</p>
-                  )}
+                        );
+                      })}
+                    
+                    {allProducts.length === 0 && (
+                      <p style={{ textAlign: 'center', color: 'var(--text-muted)', padding: 24 }}>No products found</p>
+                    )}
 
-                  {hasMoreProducts && allProducts.length > 0 && (
-                    <button 
-                      className="btn btn-ghost" 
-                      style={{ marginTop: 12, padding: 12, width: '100%', border: '1px dashed var(--border-color)' }}
-                      onClick={() => setPickerPage(prev => prev + 1)}
-                      disabled={loadingProducts}
-                    >
-                      {loadingProducts ? 'Loading...' : 'Load More Products'}
-                    </button>
-                  )}
-                </div>
-              )}
+                    {hasMoreProducts && allProducts.length > 0 && (
+                      <button 
+                        className="btn btn-ghost" 
+                        style={{ flexShrink: 0, marginTop: 12, padding: 12, width: '100%', border: '1px dashed var(--border-color)' }}
+                        onClick={() => setPickerPage(prev => prev + 1)}
+                        disabled={loadingProducts}
+                      >
+                        {loadingProducts ? 'Loading...' : 'Load More Products'}
+                      </button>
+                    )}
+                  </div>
+                )}
+              </div>
             </div>
           </div>
         </div>
