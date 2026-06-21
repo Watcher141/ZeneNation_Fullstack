@@ -15,6 +15,7 @@ import {
   MdDashboard,
   MdShoppingBag,
   MdRocketLaunch,
+  MdPersonAdd,
 } from 'react-icons/md';
 import './Navbar.css';
 
@@ -427,7 +428,7 @@ const Navbar = () => {
                   <MdPerson size={18} /> Login
                 </Link>
                 <Link to="/register" className="mobile-menu-item" onClick={() => setMobileMenuOpen(false)}>
-                  ✨ Register
+                  <MdPersonAdd size={18} /> Register
                 </Link>
               </>
             )}

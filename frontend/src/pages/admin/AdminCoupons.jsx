@@ -4,6 +4,7 @@ import AdminLayout from '../../components/admin/AdminLayout';
 import Loader from '../../components/common/Loader';
 import { couponApi } from '../../api/apiCollections';
 import toast from 'react-hot-toast';
+import { MdClose } from 'react-icons/md';
 
 const emptyForm = {
   code:'', description:'', discountType:'PERCENTAGE', discountValue:'',
@@ -150,7 +151,7 @@ const AdminCoupons = () => {
           <div className="modal" style={{ maxWidth:600 }} onClick={e => e.stopPropagation()}>
             <div className="modal-header">
               <h3 className="modal-title">{editing ? 'Edit Coupon' : 'Create Coupon'}</h3>
-              <button className="modal-close" onClick={closeModal}>✕</button>
+              <button className="modal-close" onClick={closeModal}><MdClose size={18} /></button>
             </div>
             <form onSubmit={handleSave}>
               <div className="modal-body">

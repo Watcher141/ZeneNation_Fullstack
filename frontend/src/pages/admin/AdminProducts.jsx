@@ -6,6 +6,7 @@ import Loader from '../../components/common/Loader';
 import { productApi } from '../../api/productApi';
 import { categoryApi } from '../../api/categoryApi';
 import toast from 'react-hot-toast';
+import { MdImage, MdRocketLaunch, MdPhotoLibrary, MdClose, MdSearch } from 'react-icons/md';
 
 const emptyForm = {
   name: '', description: '', tagline: '', price: '', discountPercent: '0',
@@ -189,7 +190,7 @@ const openEdit = async (p) => {
         {/* Filters */}
         <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', marginBottom: 16 }}>
           <input className="form-input" style={{ maxWidth: 220, height: 36 }}
-            placeholder="🔍 Search products..." value={filterSearch}
+            placeholder="Search products..." value={filterSearch}
             onChange={e => setFilterSearch(e.target.value)} />
           <select className="form-select" style={{ maxWidth: 200, height: 36 }}
             value={filterCategory} onChange={e => setFilterCategory(e.target.value)}>
@@ -214,7 +215,7 @@ const openEdit = async (p) => {
           {(filterCategory || filterStatus || filterSearch) && (
             <button className="btn btn-ghost btn-sm"
               onClick={() => { setFilterCategory(''); setFilterStatus(''); setFilterSearch(''); }}>
-              ✕ Clear
+              <MdClose size={14} style={{ verticalAlign: 'middle', marginRight: 4 }} /> Clear
             </button>
           )}
         </div>
@@ -234,13 +235,13 @@ const openEdit = async (p) => {
                   <td>
                     {p.primaryImageUrl
                       ? <img src={p.primaryImageUrl} alt={p.name} style={{ width: 48, height: 48, borderRadius: 8, objectFit: 'cover' }} />
-                      : <div style={{ width: 48, height: 48, background: 'var(--bg-hover)', borderRadius: 8, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>🎌</div>
+                      : <div style={{ width: 48, height: 48, background: 'var(--bg-hover)', borderRadius: 8, display: 'flex', alignItems: 'center', justifyContent: 'center' }}><MdImage size={24} color="var(--text-muted)" /></div>
                     }
                   </td>
                   <td style={{ maxWidth: 180 }}>
                     <div style={{ fontWeight: 600, color: 'var(--text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{p.name}</div>
                     <div className="text-xs text-muted">{p.slug}</div>
-                    {p.isPreorder && <span className="badge badge-yellow" style={{ fontSize: 10 }}>🚀 Preorder</span>}
+                    {p.isPreorder && <span className="badge badge-yellow" style={{ fontSize: 10, display: 'inline-flex', alignItems: 'center', gap: 3 }}><MdRocketLaunch size={10} /> Preorder</span>}
                   </td>
                   <td>
                     <span className="badge badge-purple">{p.category?.name}</span>
@@ -271,7 +272,7 @@ const openEdit = async (p) => {
                   </td>
                   <td>
                     <button className="btn btn-ghost btn-sm" onClick={() => openImageModal(p)}>
-                      🖼 {p.images?.length ? `(${p.images.length})` : 'Add'}
+                      <MdPhotoLibrary size={14} style={{ verticalAlign: 'middle', marginRight: 4 }} />{p.images?.length ? `(${p.images.length})` : 'Add'}
                     </button>
                   </td>
                   <td>
@@ -311,7 +312,7 @@ const openEdit = async (p) => {
             <div className="modal" style={{ maxWidth: 640 }} onClick={e => e.stopPropagation()}>
               <div className="modal-header">
                 <h3 className="modal-title">{editing ? 'Edit Product' : 'New Product'}</h3>
-                <button className="modal-close" onClick={closeModal}>✕</button>
+                <button className="modal-close" onClick={closeModal}><MdClose size={18} /></button>
               </div>
               <form onSubmit={handleSave}>
                 <div className="modal-body">
@@ -418,7 +419,7 @@ const openEdit = async (p) => {
                     <input type="checkbox" checked={form.isPreorder}
                       onChange={e => setForm({ ...form, isPreorder: e.target.checked })} />
                     <div>
-                      <span className="form-label" style={{ margin: 0, color: 'var(--accent-secondary)' }}>🚀 List as Preorder</span>
+                      <span className="form-label" style={{ margin: 0, color: 'var(--accent-secondary)', display: 'inline-flex', alignItems: 'center', gap: 4 }}><MdRocketLaunch size={14} /> List as Preorder</span>
                       <p className="text-xs text-muted" style={{ margin: '2px 0 0' }}>Hidden from categories — shown in Preorder section on homepage</p>
                     </div>
                   </label>
@@ -456,7 +457,7 @@ const openEdit = async (p) => {
             <div className="modal" style={{ maxWidth: 680, width: '95%' }} onClick={e => e.stopPropagation()}>
               <div className="modal-header">
                 <h2>Images — {imageModal.name}</h2>
-                <button className="modal-close" onClick={closeImageModal}>✕</button>
+                <button className="modal-close" onClick={closeImageModal}><MdClose size={18} /></button>
               </div>
               <div className="modal-body">
                 <ImageUploader

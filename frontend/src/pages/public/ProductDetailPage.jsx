@@ -7,7 +7,7 @@ import { useAuth } from '../../context/AuthContext';
 import Loader from '../../components/common/Loader';
 import StarRating from '../../components/product/StarRating';
 import ProductReviews from '../../components/product/ProductReviews';
-import { MdShoppingCart } from 'react-icons/md';
+import { MdShoppingCart, MdImage, MdCheckCircle, MdCancel, MdFitnessCenter } from 'react-icons/md';
 import HorizontalScroll from '../../components/common/HorizontalScroll';
 import ProductCard from '../../components/product/ProductCard';
 import toast from 'react-hot-toast';
@@ -97,7 +97,7 @@ const ProductDetailPage = () => {
             <div className="product-detail-main-img">
               {currentImage
                 ? <img src={currentImage.imageUrl} alt={product.name} />
-                : <div className="product-detail-no-img">🎌</div>
+                : <div className="product-detail-no-img"><MdImage size={64} color="var(--text-muted)" /></div>
               }
             </div>
             {images.length > 1 && (
@@ -145,12 +145,12 @@ const ProductDetailPage = () => {
 
             <div className="product-detail-stock" style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
               {product.stockQuantity > 0
-                ? <span className="badge badge-green">✓ In Stock ({product.stockQuantity} available)</span>
-                : <span className="badge badge-red">✗ Out of Stock</span>
+                ? <span className="badge badge-green"><MdCheckCircle size={13} style={{ verticalAlign: 'middle', marginRight: 4 }} />In Stock ({product.stockQuantity} available)</span>
+                : <span className="badge badge-red"><MdCancel size={13} style={{ verticalAlign: 'middle', marginRight: 4 }} />Out of Stock</span>
               }
               {product.weightGrams > 0 && (
                 <span className="badge badge-blue" style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-                  ⚖ {product.weightGrams >= 1000 ? `${(product.weightGrams / 1000).toFixed(2)} kg` : `${product.weightGrams}g`}
+                  <MdFitnessCenter size={13} style={{ verticalAlign: 'middle', marginRight: 4 }} />{product.weightGrams >= 1000 ? `${(product.weightGrams / 1000).toFixed(2)} kg` : `${product.weightGrams}g`}
                 </span>
               )}
             </div>

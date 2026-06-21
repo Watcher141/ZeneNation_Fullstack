@@ -56,7 +56,7 @@ const AdminLayout = ({ children }) => {
       <div className="admin-sidebar-header">
         <Link to="/" className="admin-logo" onClick={() => setMobileOpen(false)}>
           {collapsed && window.innerWidth > 768
-            ? '⚔️'
+            ? <span style={{ fontWeight: 900, fontSize: 14, letterSpacing: 1 }}>ZN</span>
             : <><span className="logo-zen">ZENE</span><span className="logo-nation">NATION</span></>
           }
         </Link>

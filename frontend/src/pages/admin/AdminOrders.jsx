@@ -4,6 +4,7 @@ import AdminLayout from '../../components/admin/AdminLayout';
 import Loader from '../../components/common/Loader';
 import { orderApi } from '../../api/apiCollections';
 import toast from 'react-hot-toast';
+import { MdClose } from 'react-icons/md';
 
 const ORDER_STATUSES = ['PENDING','CONFIRMED','PROCESSING','SHIPPED','DELIVERED','CANCELLED'];
 
@@ -125,7 +126,7 @@ const AdminOrders = () => {
           <div className="modal" style={{ maxWidth:680 }} onClick={e => e.stopPropagation()}>
             <div className="modal-header">
               <h3 className="modal-title">Order {selectedOrder.orderNumber}</h3>
-              <button className="modal-close" onClick={() => setSelectedOrder(null)}>✕</button>
+              <button className="modal-close" onClick={() => setSelectedOrder(null)}><MdClose size={18} /></button>
             </div>
             <div className="modal-body">
               <div style={{ background:'var(--bg-tertiary)', borderRadius:'var(--radius-md)', padding:'var(--space-4)' }}>

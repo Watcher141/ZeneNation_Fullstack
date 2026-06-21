@@ -3,6 +3,7 @@ import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { authApi } from '../../api/authApi';
 import toast from 'react-hot-toast';
+import { MdEmail } from 'react-icons/md';
 import './AuthPages.css';
 
 const ForgotPasswordPage = () => {
@@ -37,7 +38,7 @@ const ForgotPasswordPage = () => {
 
         {sent ? (
           <div className="auth-success">
-            <div className="auth-success-icon">📧</div>
+            <div className="auth-success-icon"><MdEmail size={48} color="var(--accent-primary)" /></div>
             <h3>Check your email!</h3>
             <p>We've sent a password reset link to <strong>{email}</strong></p>
             <p className="text-muted text-sm">The link expires in 15 minutes.</p>

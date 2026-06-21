@@ -5,6 +5,7 @@ import { useCart } from '../../context/CartContext';
 import { useAuth } from '../../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
+import { MdImage } from 'react-icons/md';
 import './ProductCard.css';
 
 const ProductCard = ({ product }) => {
@@ -50,7 +51,7 @@ const ProductCard = ({ product }) => {
         {product.primaryImageUrl ? (
           <img src={product.primaryImageUrl} alt={product.name} loading="lazy" />
         ) : (
-          <div className="product-card-no-image">🎌</div>
+          <div className="product-card-no-image"><MdImage size={36} color="var(--text-muted)" /></div>
         )}
         {hasDiscount && (
           <span className="product-card-discount">-{Math.round(product.discountPercent)}%</span>

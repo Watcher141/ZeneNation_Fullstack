@@ -3,6 +3,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { useCart } from '../../context/CartContext';
 import Loader from '../../components/common/Loader';
 import toast from 'react-hot-toast';
+import { MdShoppingCart, MdImage, MdClose, MdLocalShipping, MdCheckCircle } from 'react-icons/md';
 import './CartPage.css';
 
 const CartPage = () => {
@@ -51,7 +52,7 @@ const CartPage = () => {
 
         {items.length === 0 ? (
           <div className="empty-state">
-            <div className="empty-state-icon">🛒</div>
+            <div className="empty-state-icon"><MdShoppingCart size={64} color="var(--text-muted)" /></div>
             <p className="empty-state-title">Your cart is empty</p>
             <p className="empty-state-desc">Add some amazing anime products!</p>
             <Link to="/products" className="btn btn-primary" style={{ marginTop: '1rem' }}>
@@ -72,7 +73,7 @@ const CartPage = () => {
                   <div className="cart-item-image">
                     {item.primaryImageUrl
                       ? <img src={item.primaryImageUrl} alt={item.productName} />
-                      : <span>🎌</span>}
+                      : <span><MdImage size={28} color="var(--text-muted)" /></span>}
                   </div>
 
                   <div className="cart-item-info">
@@ -101,7 +102,7 @@ const CartPage = () => {
                     ₹{Number(item.totalPrice).toLocaleString('en-IN')}
                   </div>
 
-                  <button className="cart-item-remove" onClick={() => handleRemove(item.cartItemId)}>✕</button>
+                  <button className="cart-item-remove" onClick={() => handleRemove(item.cartItemId)}><MdClose size={16} /></button>
                 </div>
               ))}
             </div>
@@ -115,11 +116,8 @@ const CartPage = () => {
               </div>
               <div className="summary-row">
                 <span>Delivery</span>
-                <span>{deliveryCharge === 0 ? <span className="text-success">FREE</span> : `₹${deliveryCharge}`}</span>
+                <span><span className="text-success" style={{ display: 'flex', alignItems: 'center', gap: 4 }}><MdCheckCircle size={14} /> Free Delivery</span></span>
               </div>
-              {deliveryCharge > 0 && (
-                <p className="summary-free-note">Add ₹{(500 - subtotal).toFixed(0)} more for free delivery</p>
-              )}
               <div className="divider" />
               <div className="summary-row summary-total">
                 <span>Total</span>

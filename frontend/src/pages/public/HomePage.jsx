@@ -8,6 +8,7 @@ import ProductCard from '../../components/product/ProductCard';
 import HorizontalScroll from '../../components/common/HorizontalScroll';
 import Loader from '../../components/common/Loader';
 import { announcementApi } from '../../api/apiCollections';
+import { MdAutoAwesome, MdImage, MdRocketLaunch, MdCampaign, MdLocalOffer, MdWarning, MdCheckCircle } from 'react-icons/md';
 import './HomePage.css';
 
 /* =============================================================================
@@ -127,7 +128,7 @@ const HomePage = () => {
                 letterSpacing: '1px',
                 whiteSpace: 'nowrap'
               }}>
-                ⚔️ Featured Collection
+                <MdAutoAwesome size={12} style={{ marginRight: 4, verticalAlign: 'middle' }} /> Featured Collection
               </div>
 
               <h2 style={{
@@ -176,7 +177,7 @@ const HomePage = () => {
                 <Link to={`/products?categoryId=${cat.id}`} key={cat.id} className="category-card category-card--scroll">
                   {cat.imageUrl
                     ? <img src={cat.imageUrl} alt={cat.name} />
-                    : <div className="category-icon">🎌</div>
+                    : <div className="category-icon"><MdImage size={28} color="var(--text-muted)" /></div>
                   }
                   <span className="category-name">{cat.name}</span>
                 </Link>
@@ -223,7 +224,7 @@ const HomePage = () => {
           <div className="container">
             <div className="section-header">
               <div>
-                <div className="preorder-section-badge">🚀 Coming Soon</div>
+                <div className="preorder-section-badge"><MdRocketLaunch size={14} style={{ marginRight: 4, verticalAlign: 'middle' }} /> Coming Soon</div>
                 <h2 className="section-title">Preorder Collection</h2>
                 <p className="section-subtitle">Reserve upcoming anime collectibles before they're gone</p>
               </div>
@@ -235,7 +236,7 @@ const HomePage = () => {
                   <div className="preorder-home-img">
                     {product.primaryImageUrl
                       ? <img src={product.primaryImageUrl} alt={product.name} />
-                      : <span>🎌</span>}
+                      : <span><MdImage size={28} color="var(--text-muted)" /></span>}
                     <div className="preorder-home-badge">PREORDER</div>
                   </div>
                   <div className="preorder-home-info">
@@ -277,9 +278,9 @@ const HomePage = () => {
                   </div>
                 )}
                 <div className="promo-type-badge">
-                  {announcements[annIndex]?.type === 'DEAL'    ? '🎉 Deal'       :
-                   announcements[annIndex]?.type === 'SUCCESS' ? '✅ Update'     :
-                   announcements[annIndex]?.type === 'WARNING' ? '⚠️ Notice'    : '📢 Announcement'}
+                  {announcements[annIndex]?.type === 'DEAL'    ? <><MdLocalOffer size={14} style={{ verticalAlign: 'middle', marginRight: 4 }} />Deal</> :
+                   announcements[annIndex]?.type === 'SUCCESS' ? <><MdCheckCircle size={14} style={{ verticalAlign: 'middle', marginRight: 4 }} />Update</> :
+                   announcements[annIndex]?.type === 'WARNING' ? <><MdWarning size={14} style={{ verticalAlign: 'middle', marginRight: 4 }} />Notice</> : <><MdCampaign size={14} style={{ verticalAlign: 'middle', marginRight: 4 }} />Announcement</>}
                 </div>
                 <h2>{announcements[annIndex]?.title}</h2>
                 <p className="text-secondary">{announcements[annIndex]?.message}</p>

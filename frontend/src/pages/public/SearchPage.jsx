@@ -4,6 +4,7 @@ import { useSearchParams } from 'react-router-dom';
 import { productApi } from '../../api/productApi';
 import ProductCard from '../../components/product/ProductCard';
 import Loader from '../../components/common/Loader';
+import { MdSearch } from 'react-icons/md';
 
 const SearchPage = () => {
   const [searchParams] = useSearchParams();
@@ -56,7 +57,7 @@ useEffect(() => {
           </div>
         ) : (
           <div className="empty-state">
-            <div className="empty-state-icon">🔍</div>
+            <div className="empty-state-icon"><MdSearch size={64} color="var(--text-muted)" /></div>
             <p className="empty-state-title">No products found</p>
             <p className="empty-state-desc">Try a different search term</p>
           </div>

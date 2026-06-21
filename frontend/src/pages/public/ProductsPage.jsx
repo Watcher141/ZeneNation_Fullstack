@@ -4,6 +4,7 @@ import { useSearchParams } from 'react-router-dom';
 import { productApi } from '../../api/productApi';
 import { categoryApi } from '../../api/categoryApi';
 import ProductCard from '../../components/product/ProductCard';
+import { MdImage } from 'react-icons/md';
 import './ProductsPage.css';
 
 // ── NEW: Skeleton Loader Component ──
@@ -181,7 +182,7 @@ const ProductsPage = () => {
             </>
           ) : (
             <div className="empty-state">
-              <div className="empty-state-icon">🎌</div>
+              <div className="empty-state-icon"><MdImage size={64} color="var(--text-muted)" /></div>
               <p className="empty-state-title">No products found</p>
             </div>
           )}

@@ -196,7 +196,7 @@ const ProfilePage = () => {
           <div className="welcome-coupon-banner">
             <div className="welcome-coupon-icon"><MdLocalOffer size={28} /></div>
             <div className="welcome-coupon-info">
-              <div className="welcome-coupon-label">🎁 Your Welcome Gift</div>
+              <div className="welcome-coupon-label"><MdLocalOffer size={16} style={{ marginRight: 6, verticalAlign: 'middle' }} /> Your Welcome Gift</div>
               <div className="welcome-coupon-code"
                 onClick={() => { navigator.clipboard.writeText(welcomeCoupon.code); import('react-hot-toast').then(m => m.default.success('Coupon code copied!')); }}
                 title="Click to copy">

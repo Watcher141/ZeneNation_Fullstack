@@ -4,7 +4,7 @@ import { useAuth } from '../../context/AuthContext';
 import { reviewApi } from '../../api/apiCollections';
 import StarRating from './StarRating';
 import toast from 'react-hot-toast';
-import { MdVerified, MdEdit, MdDelete, MdSend } from 'react-icons/md';
+import { MdVerified, MdEdit, MdDelete, MdSend, MdStar, MdCheckCircle } from 'react-icons/md';
 import './ProductReviews.css';
 
 const ProductReviews = ({ productId }) => {
@@ -109,7 +109,7 @@ const ProductReviews = ({ productId }) => {
             const pct = totalReviews > 0 ? Math.round((count / totalReviews) * 100) : 0;
             return (
               <div key={star} className="dist-row">
-                <span className="dist-label">{star} ★</span>
+                <span className="dist-label">{star} <MdStar size={12} style={{ verticalAlign: 'middle', color: '#f5a623' }} /></span>
                 <div className="dist-bar-wrap">
                   <div className="dist-bar" style={{ width: `${pct}%` }} />
                 </div>
@@ -125,7 +125,7 @@ const ProductReviews = ({ productId }) => {
             <p className="text-muted text-sm">Login to write a review</p>
           ) : summary?.userHasReviewed ? (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-              <p className="text-sm text-success">✓ You've reviewed this product</p>
+              <p className="text-sm text-success" style={{ display: 'flex', alignItems: 'center', gap: 4 }}><MdCheckCircle size={14} /> You've reviewed this product</p>
               <div style={{ display: 'flex', gap: 8 }}>
                 <button className="btn btn-ghost btn-sm" onClick={handleEdit}>
                   <MdEdit size={16} /> Edit Review

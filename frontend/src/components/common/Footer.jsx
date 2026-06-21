@@ -21,12 +21,12 @@ const Footer = () => {
       setSubscribed(true);
       setEmail('');
       setName('');
-      toast.success('Subscribed! Check your email 🎉');
+      toast.success('Subscribed! Check your email for a welcome message.');
     } catch (err) {
       const msg = err.response?.data?.message || 'Failed to subscribe';
       // If already subscribed, still show success-ish
       if (msg.toLowerCase().includes('already')) {
-        toast('You are already subscribed!', { icon: '✅' });
+        toast('You are already subscribed!', { icon: '✓' });
       } else {
         toast.error(msg);
       }
@@ -50,7 +50,7 @@ const Footer = () => {
           {subscribed ? (
             <div className="newsletter-success">
               <MdCheckCircle size={24} color="var(--accent-green)" />
-              <span>You're subscribed! Welcome to the Zenenation family 🎌</span>
+              <span>You're subscribed! Welcome to the Zenenation family</span>
             </div>
           ) : (
             <form onSubmit={handleSubscribe} className="newsletter-form">

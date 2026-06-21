@@ -4,7 +4,7 @@ import AdminLayout from '../../components/admin/AdminLayout';
 import Loader from '../../components/common/Loader';
 import { categoryApi } from '../../api/categoryApi';
 import toast from 'react-hot-toast';
-import { MdAdd, MdEdit, MdDelete, MdImage, MdExpandMore, MdExpandLess, MdSubdirectoryArrowRight } from 'react-icons/md';
+import { MdAdd, MdEdit, MdDelete, MdImage, MdExpandMore, MdExpandLess, MdSubdirectoryArrowRight, MdClose } from 'react-icons/md';
 
 const emptyForm = { name: '', description: '', parentId: '' };
 
@@ -240,7 +240,7 @@ const AdminCategories = () => {
           <div className="modal" onClick={e => e.stopPropagation()}>
             <div className="modal-header">
               <h2>{editing ? 'Edit Category' : 'Add Category'}</h2>
-              <button className="modal-close" onClick={closeModal}>✕</button>
+              <button className="modal-close" onClick={closeModal}><MdClose size={18} /></button>
             </div>
             <form onSubmit={handleSave} className="modal-body">
               <div className="form-group">

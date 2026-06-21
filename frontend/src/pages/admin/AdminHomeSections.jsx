@@ -5,7 +5,7 @@ import Loader from '../../components/common/Loader';
 import { homeSectionApi } from '../../api/homeSectionApi';
 import { productApi } from '../../api/productApi';
 import toast from 'react-hot-toast';
-import { MdAdd, MdEdit, MdDelete, MdVisibility, MdVisibilityOff, MdClose, MdSearch } from 'react-icons/md';
+import { MdAdd, MdEdit, MdDelete, MdVisibility, MdVisibilityOff, MdClose, MdSearch, MdImage, MdCategory } from 'react-icons/md';
 
 const TYPE_OPTIONS = ['NEW_ARRIVAL', 'PREORDER', 'CUSTOM'];
 const emptyForm = { title: '', subtitle: '', type: 'CUSTOM', displayOrder: 0, isActive: true, viewAllUrl: '' };
@@ -247,7 +247,7 @@ const AdminHomeSections = () => {
                         <div key={p.id} style={{ position: 'relative' }}>
                           {p.primaryImageUrl
                             ? <img src={p.primaryImageUrl} alt={p.name} style={{ width: 44, height: 44, borderRadius: 6, objectFit: 'cover', border: '1px solid var(--border-color)' }} />
-                            : <div style={{ width: 44, height: 44, borderRadius: 6, background: 'var(--bg-tertiary)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 20 }}>🎌</div>
+                            : <div style={{ width: 44, height: 44, borderRadius: 6, background: 'var(--bg-tertiary)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 20 }}><MdImage size={22} color="var(--text-muted)" /></div>
                           }
                         </div>
                       ))}
@@ -262,7 +262,7 @@ const AdminHomeSections = () => {
 
                 <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
                   <button className="btn btn-ghost btn-sm" onClick={() => openPicker(section)}>
-                    🎌 Manage Products
+                    <MdCategory size={14} style={{ verticalAlign: 'middle', marginRight: 4 }} /> Manage Products
                   </button>
                   <button className="btn btn-ghost btn-sm" onClick={() => openEdit(section)}>
                     <MdEdit size={14} /> Edit
@@ -293,7 +293,7 @@ const AdminHomeSections = () => {
           <div className="modal" style={{ maxWidth: 520 }} onClick={e => e.stopPropagation()}>
             <div className="modal-header">
               <h3>{editing ? 'Edit Section' : 'New Section'}</h3>
-              <button className="modal-close" onClick={closeModal}>✕</button>
+              <button className="modal-close" onClick={closeModal}><MdClose size={18} /></button>
             </div>
             <form onSubmit={handleSave}>
               <div className="modal-body">
@@ -349,7 +349,7 @@ const AdminHomeSections = () => {
           <div className="modal" style={{ maxWidth: 720, width: '95%', maxHeight: '85vh', display: 'flex', flexDirection: 'column' }} onClick={e => e.stopPropagation()}>
             <div className="modal-header" style={{ flexShrink: 0 }}>
               <h3>Manage Products — {pickerSection.title}</h3>
-              <button className="modal-close" onClick={closePicker}>✕</button>
+              <button className="modal-close" onClick={closePicker}><MdClose size={18} /></button>
             </div>
             
             {/* NEW: Modal Body Flex Structure */}
@@ -405,7 +405,7 @@ const AdminHomeSections = () => {
                           <div key={p.id} style={{ flexShrink: 0, display: 'flex', alignItems: 'center', gap: 12, padding: '8px 12px', borderRadius: 8, background: inSection ? 'rgba(76,175,80,0.06)' : 'var(--bg-tertiary)', border: `1px solid ${inSection ? 'rgba(76,175,80,0.2)' : 'var(--border-color)'}` }}>
                             {p.primaryImageUrl
                               ? <img src={p.primaryImageUrl} alt={p.name} style={{ width: 40, height: 40, borderRadius: 6, objectFit: 'cover', flexShrink: 0 }} />
-                              : <div style={{ width: 40, height: 40, borderRadius: 6, background: 'var(--bg-secondary)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>🎌</div>
+                              : <div style={{ width: 40, height: 40, borderRadius: 6, background: 'var(--bg-secondary)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}><MdImage size={20} color="var(--text-muted)" /></div>
                             }
                             <div style={{ flex: 1, minWidth: 0 }}>
                               <p style={{ margin: 0, fontSize: 14, color: 'var(--text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{p.name}</p>

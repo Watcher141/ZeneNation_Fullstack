@@ -3,12 +3,17 @@ import { useState, useEffect, useCallback } from 'react';
 import AdminLayout from '../../components/admin/AdminLayout';
 import Loader from '../../components/common/Loader';
 import { announcementApi } from '../../api/apiCollections';
-import { MdCampaign, MdLocalOffer, MdWarning, MdCheckCircle, MdEmail, MdPeople } from 'react-icons/md';
+import { MdCampaign, MdLocalOffer, MdWarning, MdCheckCircle, MdEmail, MdPeople, MdClose, MdCancel } from 'react-icons/md';
 import toast from 'react-hot-toast';
 
 const TYPE_OPTIONS = ['INFO', 'DEAL', 'WARNING', 'SUCCESS'];
 
-const typeIcon = { INFO: '📢', DEAL: '🎉', WARNING: '⚠️', SUCCESS: '✅' };
+const typeIcon = { 
+  INFO: <MdCampaign size={16} />, 
+  DEAL: <MdLocalOffer size={16} />, 
+  WARNING: <MdWarning size={16} />, 
+  SUCCESS: <MdCheckCircle size={16} /> 
+};
 const typeBadge = { INFO: 'badge-blue', DEAL: 'badge-gold', WARNING: 'badge-red', SUCCESS: 'badge-green' };
 
 const emptyForm = {
@@ -151,8 +156,9 @@ const AdminAnnouncements = () => {
                   {a.message.length > 80 ? a.message.slice(0, 80) + '...' : a.message}
                 </td>
                 <td>
-                  <span className={`badge ${a.emailSent ? 'badge-green' : 'badge-red'}`}>
-                    {a.emailSent ? '✓ Sent' : '✗ Not sent'}
+                  <span className={`badge ${a.emailSent ? 'badge-green' : 'badge-red'}`}
+                    style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+                    {a.emailSent ? <><MdCheckCircle size={12} /> Sent</> : <><MdCancel size={12} /> Not sent</>}
                   </span>
                 </td>
                 <td className="text-xs text-muted">
@@ -196,7 +202,7 @@ const AdminAnnouncements = () => {
           <div className="modal" style={{ maxWidth: 580 }} onClick={e => e.stopPropagation()}>
             <div className="modal-header">
               <h3 className="modal-title">{editing ? 'Edit Announcement' : 'New Announcement'}</h3>
-              <button className="modal-close" onClick={() => setShowModal(false)}>✕</button>
+              <button className="modal-close" onClick={() => setShowModal(false)}><MdClose size={18} /></button>
             </div>
             <form onSubmit={handleSave}>
               <div className="modal-body">

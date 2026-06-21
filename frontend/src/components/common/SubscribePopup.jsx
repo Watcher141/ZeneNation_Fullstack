@@ -1,7 +1,7 @@
 // src/components/common/SubscribePopup.jsx
 import { useState, useEffect } from 'react';
 import { announcementApi } from '../../api/apiCollections';
-import { MdClose, MdEmail, MdCardGiftcard } from 'react-icons/md';
+import { MdClose, MdEmail, MdCardGiftcard, MdNewReleases, MdFlashOn, MdCheckCircle } from 'react-icons/md';
 import toast from 'react-hot-toast';
 import './SubscribePopup.css';
 
@@ -33,7 +33,7 @@ const SubscribePopup = () => {
       await announcementApi.subscribe({ email, name });
       setSubscribed(true);
       localStorage.setItem('subscribePopupSeen', 'true');
-      toast.success('Subscribed! Check your email 🎉');
+      toast.success('Subscribed! Check your email for a welcome message.');
     } catch (err) {
       toast.error(err.response?.data?.message || 'Failed to subscribe');
     } finally { setLoading(false); }
@@ -50,7 +50,7 @@ const SubscribePopup = () => {
 
         {subscribed ? (
           <div className="subscribe-success">
-            <div className="subscribe-success-icon">🎌</div>
+            <div className="subscribe-success-icon"><MdCheckCircle size={48} color="var(--accent-primary)" /></div>
             <h3>You're subscribed!</h3>
             <p>Thanks for joining! Check your email for a welcome message.</p>
             <button className="btn btn-primary btn-sm" onClick={handleClose}>Start Shopping</button>
@@ -69,11 +69,11 @@ const SubscribePopup = () => {
                 <span>Exclusive member deals</span>
               </div>
               <div className="subscribe-perk">
-                <span>📦</span>
+                <MdNewReleases size={18} color="var(--accent-primary)" />
                 <span>New product alerts</span>
               </div>
               <div className="subscribe-perk">
-                <span>⚡</span>
+                <MdFlashOn size={18} color="var(--accent-secondary)" />
                 <span>Flash sale notifications</span>
               </div>
             </div>
@@ -84,7 +84,7 @@ const SubscribePopup = () => {
               <input className="form-input" type="email" placeholder="your@email.com" required
                 value={email} onChange={e => setEmail(e.target.value)} />
               <button type="submit" className="btn btn-primary btn-full" disabled={loading}>
-                {loading ? 'Subscribing...' : '🎌 Subscribe Now'}
+                {loading ? 'Subscribing...' : 'Subscribe Now'}
               </button>
             </form>
 

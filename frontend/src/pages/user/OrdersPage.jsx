@@ -4,6 +4,7 @@ import { Link } from 'react-router-dom';
 import { orderApi } from '../../api/apiCollections';
 import Loader from '../../components/common/Loader';
 import toast from 'react-hot-toast';
+import { MdInfo, MdInventory2, MdImage, MdLock, MdShoppingBag } from 'react-icons/md';
 import './OrdersPage.css';
 
 const statusBadge = {
@@ -67,10 +68,10 @@ const OrdersPage = () => {
           alignItems: 'center',
           gap: 8,
         }}>
-          <span style={{ fontSize: 18 }}>ℹ️</span>
+          <MdInfo size={18} color="var(--accent-primary)" />
           <span>
-            Orders can be cancelled only before they are <strong>Shipped</strong>.
-            Once shipped, cancellation is not possible.&nbsp;
+            Orders can be cancelled only when in <strong>Pending</strong> or <strong>Confirmed</strong> status.
+            Once an order moves to Processing, cancellation is not possible.&nbsp;
             Need help? Email us at{' '}
             <a href="mailto:zenenationstore@gmail.com" style={{ color: 'var(--accent-primary)' }}>
               zenenationstore@gmail.com
@@ -80,7 +81,7 @@ const OrdersPage = () => {
 
         {orders.length === 0 ? (
           <div className="empty-state">
-            <div className="empty-state-icon">📦</div>
+            <div className="empty-state-icon"><MdInventory2 size={64} color="var(--text-muted)" /></div>
             <p className="empty-state-title">No orders yet</p>
             <p className="empty-state-desc">Start shopping to see your orders here</p>
             <Link to="/products" className="btn btn-primary" style={{ marginTop: '1rem' }}>
@@ -115,7 +116,7 @@ const OrdersPage = () => {
                       <div key={item.id} className="order-item-preview">
                         {item.productImageUrl
                           ? <img src={item.productImageUrl} alt={item.productName} />
-                          : <div className="order-item-no-img">🎌</div>
+                          : <div className="order-item-no-img"><MdImage size={24} color="var(--text-muted)" /></div>
                         }
                         <div>
                           <p className="order-item-name">{item.productName}</p>
@@ -138,7 +139,7 @@ const OrdersPage = () => {
                       </span>
                     </div>
                     <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-                      {(order.status === 'PENDING' || order.status === 'CONFIRMED' || order.status === 'PROCESSING') && (
+                      {(order.status === 'PENDING' || order.status === 'CONFIRMED') && (
                         <button className="btn btn-sm"
                           style={{ background: 'rgba(244,67,54,0.1)', color: 'var(--accent-red)', border: '1px solid rgba(244,67,54,0.2)' }}
                           onClick={() => handleCancel(order.id)}
@@ -146,9 +147,9 @@ const OrdersPage = () => {
                           {cancellingId === order.id ? 'Cancelling...' : 'Cancel Order'}
                         </button>
                       )}
-                      {(order.status === 'SHIPPED' || order.status === 'DELIVERED') && (
+                      {(order.status === 'PROCESSING' || order.status === 'SHIPPED' || order.status === 'DELIVERED') && (
                         <span className="text-xs text-muted" style={{ fontStyle: 'italic' }}>
-                          🔒 Cannot cancel — already {order.status.toLowerCase()}
+                          <MdLock size={14} style={{ verticalAlign: 'middle', marginRight: 4 }} /> Cannot cancel — already {order.status.toLowerCase()}
                         </span>
                       )}
                     </div>

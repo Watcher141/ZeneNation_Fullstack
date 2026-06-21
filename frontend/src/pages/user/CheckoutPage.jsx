@@ -20,7 +20,7 @@ const CheckoutPage = () => {
 
   const [addresses, setAddresses] = useState([]);
   const [selectedAddress, setSelectedAddress] = useState(null);
-  const [paymentMethod, setPaymentMethod] = useState('COD');
+  const [paymentMethod, setPaymentMethod] = useState('ONLINE');
   const [couponCode, setCouponCode] = useState('');
   const [couponData, setCouponData] = useState(null);
   const [couponLoading, setCouponLoading] = useState(false);

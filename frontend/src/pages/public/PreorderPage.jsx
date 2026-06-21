@@ -9,7 +9,7 @@ import Loader from '../../components/common/Loader';
 import toast from 'react-hot-toast';
 import {
   MdRocketLaunch, MdCalendarToday, MdShoppingCart,
-  MdInfo, MdCheckCircle,
+  MdInfo, MdCheckCircle, MdImage,
 } from 'react-icons/md';
 import './PreorderPage.css';
 
@@ -85,7 +85,7 @@ const PreorderPage = () => {
                 <Link to={`/products/${product.slug}`} className="preorder-card-image">
                   {product.primaryImageUrl
                     ? <img src={product.primaryImageUrl} alt={product.name} />
-                    : <div className="preorder-no-img">🎌</div>
+                    : <div className="preorder-no-img"><MdImage size={40} color="var(--text-muted)" /></div>
                   }
                   <div className="preorder-label"><MdRocketLaunch size={12} /> PREORDER</div>
                 </Link>
