@@ -1,6 +1,8 @@
 // src/pages/user/CartPage.jsx
+import { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useCart } from '../../context/CartContext';
+import { shippingApi } from '../../api/apiCollections';
 import Loader from '../../components/common/Loader';
 import toast from 'react-hot-toast';
 import { MdShoppingCart, MdImage, MdClose, MdLocalShipping, MdCheckCircle } from 'react-icons/md';
@@ -9,6 +11,24 @@ import './CartPage.css';
 const CartPage = () => {
   const { cart, loading, updateItem, removeItem, clearCart } = useCart();
   const navigate = useNavigate();
+  const [shippingConfig, setShippingConfig] = useState(null);
+
+  useEffect(() => {
+    shippingApi.getConfig()
+      .then(res => setShippingConfig(res.data.data))
+      .catch(() => {});
+  }, []);
+
+  const calculateDeliveryCharge = (weight, slabs) => {
+    if (!slabs || slabs.length === 0) return 0;
+    const w = Math.max(weight, 1);
+    for (const slab of slabs) {
+      if (w >= slab.minWeightGrams && w <= slab.maxWeightGrams) {
+        return Number(slab.charge);
+      }
+    }
+    return Number(slabs[slabs.length - 1].charge);
+  };
 
   const handleQtyChange = async (cartItemId, qty) => {
     try {
@@ -41,8 +61,10 @@ const CartPage = () => {
 
   const items = cart?.items || [];
   const subtotal = cart?.subtotal || 0;
-  //const deliveryCharge = subtotal >= 500 ? 0 : 49;
-  const deliveryCharge = 0;
+  const totalWeightGrams = items.reduce((sum, item) => sum + (item.weightGrams || 0) * item.quantity, 0);
+  const deliveryCharge = shippingConfig
+    ? calculateDeliveryCharge(totalWeightGrams, shippingConfig.deliverySlabs)
+    : 0;
   const total = Number(subtotal) + deliveryCharge;
 
   return (
@@ -115,8 +137,20 @@ const CartPage = () => {
                 <span>₹{Number(subtotal).toLocaleString('en-IN')}</span>
               </div>
               <div className="summary-row">
-                <span>Delivery</span>
-                <span><span className="text-success" style={{ display: 'flex', alignItems: 'center', gap: 4 }}><MdCheckCircle size={14} /> Free Delivery</span></span>
+                <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                  <MdLocalShipping size={15} /> Delivery
+                  {totalWeightGrams > 0 && (
+                    <span className="text-muted" style={{ fontSize: '0.72rem', fontWeight: 'normal' }}>
+                      ({totalWeightGrams >= 1000 ? `${(totalWeightGrams / 1000).toFixed(2)} kg` : `${totalWeightGrams}g`})
+                    </span>
+                  )}
+                </span>
+                <span>
+                  {deliveryCharge === 0
+                    ? <span className="text-success" style={{ display: 'flex', alignItems: 'center', gap: 4 }}><MdCheckCircle size={14} /> Free</span>
+                    : `₹${deliveryCharge.toLocaleString('en-IN')}`
+                  }
+                </span>
               </div>
               <div className="divider" />
               <div className="summary-row summary-total">
