@@ -162,13 +162,13 @@ const AdminHomeSections = () => {
 
   // ── Product Picker Handlers ──
   const openPicker = (section) => {
-    setPickerSection(section);
-    setProductSearch('');
-    setDebouncedSearch('');
-    setPickerPage(0);
-    setAllProducts([]);
-    setHasMoreProducts(true);
-  };
+  setAllProducts([]);       // reset first
+  setPickerPage(0);
+  setProductSearch('');
+  setDebouncedSearch('');   // ← this is the key fix
+  setHasMoreProducts(true);
+  setPickerSection(section); // set section LAST so effect fires with clean state
+};
 
   const closePicker = () => { 
     setPickerSection(null); 

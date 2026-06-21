@@ -107,17 +107,18 @@ public class ProductController {
      * GET /api/v1/products/admin/all
      * All products including hidden ones. Admin only.
      */
-    @GetMapping("/admin/all")
-    @PreAuthorize("hasRole('ADMIN')")
-    @SecurityRequirement(name = "bearerAuth")
-    @Operation(summary = "Admin: get all products including hidden")
-    public ResponseEntity<ApiResponse<PagedResponse<ProductSummaryResponse>>> getAllForAdmin(
-            @RequestParam(defaultValue = "0")  int page,
-            @RequestParam(defaultValue = "20") int size) {
+   @GetMapping("/admin/all")
+@PreAuthorize("hasRole('ADMIN')")
+@SecurityRequirement(name = "bearerAuth")
+@Operation(summary = "Admin: get all products including hidden")
+public ResponseEntity<ApiResponse<PagedResponse<ProductSummaryResponse>>> getAllForAdmin(
+        @RequestParam(defaultValue = "0")  int page,
+        @RequestParam(defaultValue = "20") int size,
+        @RequestParam(required = false)    String search) {  // ← added
 
-        return ResponseEntity.ok(ApiResponse.success("Products fetched",
-                productService.getAllProductsForAdmin(page, size)));
-    }
+    return ResponseEntity.ok(ApiResponse.success("Products fetched",
+            productService.getAllProductsForAdmin(page, size, search)));  // ← pass search
+}
 
     /**
      * POST /api/v1/products

@@ -140,11 +140,18 @@ public class ProductServiceImpl implements ProductService {
 
     @Override
     @Transactional(readOnly = true)
-    public PagedResponse<ProductSummaryResponse> getAllProductsForAdmin(int page, int size) {
+    public PagedResponse<ProductSummaryResponse> getAllProductsForAdmin(int page, int size, String search) {
         Pageable pageable = PageRequest.of(page, size, Sort.by("createdAt").descending());
-        Page<Product> products = productRepository.findByIsDeletedFalse(pageable);
-        return PagedResponse.of(products.map(this::toSummaryResponse));
+
+        Page<Product> products;
+        if (search != null && !search.trim().isEmpty()) {
+            products = productRepository.searchAdminByKeyword(search.trim(), pageable);
+        } else {
+            products = productRepository.findByIsDeletedFalse(pageable);
     }
+
+    return PagedResponse.of(products.map(this::toSummaryResponse));
+}
 
     // -------------------------------------------------------------------------
     // ADMIN — CREATE

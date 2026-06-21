@@ -138,4 +138,21 @@ public interface ProductRepository extends JpaRepository<Product, Long> {
             """)
     Page<Product> findByCategoryIdAndIsDeletedFalse(
             @Param("categoryId") Long categoryId, Pageable pageable);
+
+
+
+
+@Query(value = """
+        SELECT p FROM Product p JOIN FETCH p.category
+        WHERE p.isDeleted = false
+        AND (LOWER(p.name) LIKE LOWER(CONCAT('%', :keyword, '%'))
+            OR LOWER(p.category.name) LIKE LOWER(CONCAT('%', :keyword, '%')))
+        """,
+       countQuery = """
+        SELECT COUNT(p) FROM Product p
+        WHERE p.isDeleted = false
+        AND (LOWER(p.name) LIKE LOWER(CONCAT('%', :keyword, '%'))
+            OR LOWER(p.category.name) LIKE LOWER(CONCAT('%', :keyword, '%')))
+        """)
+Page<Product> searchAdminByKeyword(@Param("keyword") String keyword, Pageable pageable);
 }
