@@ -46,9 +46,12 @@ import AdminShippingConfig from './pages/admin/AdminShippingConfig';
 
 const AppLayout = ({ children }) => (
   <>
-    <AnnouncementBanner />
     <Navbar />
-    {children}
+    <AnnouncementBanner />
+
+    <main style={{ paddingTop: 'calc(var(--navbar-height, 70px) )' }}>
+      {children}
+    </main>
     <Footer />
     <SubscribePopup />
   </>

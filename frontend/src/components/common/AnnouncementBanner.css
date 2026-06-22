@@ -1,87 +1,112 @@
 /* src/components/common/AnnouncementBanner.css */
 
 .announcement-banner {
-  position: fixed;
-  top: var(--navbar-height);
+  position: fixed; 
+  top: var(--navbar-height); 
   left: 0;
   right: 0;
   z-index: 990;
-  padding: var(--space-2) var(--space-4);
+  height: 40px; 
+  padding: 0 var(--space-4);
+  display: flex;
+  align-items: center;
+  overflow: hidden; 
+  background-color: #111111 !important; 
   animation: slideDown 0.3s ease;
 }
 
 @keyframes slideDown {
-  from { transform: translateY(-100%); opacity: 0; }
+  from { transform: translateY(-10px); opacity: 0; }
   to   { transform: translateY(0);     opacity: 1; }
 }
 
 .announcement-inner {
   max-width: 1200px;
+  width: 100%;
   margin: 0 auto;
   display: flex;
   align-items: center;
+  justify-content: space-between;
   gap: var(--space-3);
 }
 
-.announcement-content {
+.announcement-icon-wrapper {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  z-index: 2;
+}
+
+
+.announcement-marquee-container {
   flex: 1;
+  height: 24px;
+  overflow: hidden;
+  display: block; 
+}
+
+.animate-marquee {
+  display: inline-block; 
+  white-space: nowrap;
+  padding-left: 100%; 
+  line-height: 24px;
   font-size: var(--text-sm);
-  color: var(--text-primary);
-  text-align: center;
+  color: #ffffff !important; 
+  font-weight: 500;
+  
+  /* Increased from 25s to 45s to make the speed much slower and easier to read */
+  animation: slideLeft 20s linear infinite; 
+}
+
+.announcement-marquee-container:hover .animate-marquee {
+  animation-play-state: paused;
+}
+
+@keyframes slideLeft {
+  0% { transform: translateX(0); }
+  100% { transform: translateX(-100%); }
+}
+
+/* ── CONTINUOUS FEED SPACING ── */
+.announcement-item {
+  display: inline-block;
+  white-space: nowrap;
+}
+
+.announcement-separator {
+  display: inline-block;
+  margin: 0 50px; 
+  color: #888888;
+  font-size: 16px;
+  vertical-align: middle;
 }
 
 .announcement-title {
   font-weight: var(--font-bold);
+  margin-right: 6px;
 }
 
-.announcement-message {
-  color: var(--text-secondary);
-}
-
-.announcement-dots {
+/* ── RIGHT CONTROLS ── */
+.announcement-controls {
+  flex-shrink: 0;
   display: flex;
-  gap: 6px;
   align-items: center;
+  gap: 12px;
+  z-index: 2;
 }
-
-.dot {
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  background: var(--border-secondary);
-  border: none;
-  cursor: pointer;
-  padding: 0;
-  transition: background var(--transition-fast);
-}
-
-.dot.active { width: 20px; border-radius: 4px; }
 
 .announcement-close {
   background: none;
   border: none;
-  color: var(--text-muted);
+  color: #ffffff;
   cursor: pointer;
   padding: var(--space-1);
-  border-radius: var(--radius-sm);
   display: flex;
   align-items: center;
-  transition: all var(--transition-fast);
-  flex-shrink: 0;
-}
-
-.announcement-close:hover {
-  background: var(--bg-hover);
-  color: var(--text-primary);
-}
-
-/* Push page content down when banner is showing */
-.has-announcement .page-wrapper {
-  padding-top: calc(var(--navbar-height) + 38px);
 }
 
 @media (max-width: 768px) {
   .announcement-inner { gap: var(--space-2); }
-  .announcement-content { text-align: left; font-size: var(--text-xs); }
-  .announcement-dots { display: none; }
+  .animate-marquee { font-size: var(--text-xs); }
+  .announcement-controls { gap: var(--space-2); }
 }
