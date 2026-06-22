@@ -4,7 +4,6 @@ import com.resend.Resend;
 import com.resend.core.exception.ResendException;
 import com.resend.services.emails.model.CreateEmailOptions;
 import com.zenenation.backend.service.EmailService;
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.scheduling.annotation.Async;
@@ -96,6 +95,17 @@ public class EmailServiceImpl implements EmailService {
                                                 String customerName, String totalAmount) {
         sendEmail(adminEmail, "❌ Order Cancelled — " + orderNumber,
                 buildOrderCancellationAdminEmailBody(orderNumber, customerName, totalAmount));
+    }
+
+    // -------------------------------------------------------------------------
+    // ORDER CANCELLATION — CUSTOMER NOTIFICATION (ADDED FIX)
+    // -------------------------------------------------------------------------
+
+    @Override
+    @Async
+    public void sendOrderCancellationEmail(String toEmail, String customerName, String orderNumber) {
+        sendEmail(toEmail, "Order Cancelled — " + orderNumber,
+                buildOrderCancellationCustomerEmailBody(orderNumber, customerName));
     }
 
     // -------------------------------------------------------------------------
@@ -374,8 +384,8 @@ public class EmailServiceImpl implements EmailService {
     }
 
     private String buildOrderCancellationAdminEmailBody(String orderNumber,
-                                                         String customerName,
-                                                         String totalAmount) {
+                                                        String customerName,
+                                                        String totalAmount) {
         String adminOrdersUrl = frontendUrl + "/admin/orders";
         return """
             <!DOCTYPE html><html><head><meta charset="UTF-8">
@@ -403,5 +413,35 @@ public class EmailServiceImpl implements EmailService {
                 <div class="footer">&copy; 2025 Zenenation Admin Panel. All rights reserved.</div>
             </div></body></html>
             """.formatted(orderNumber, customerName, totalAmount, adminOrdersUrl);
+    }
+
+    private String buildOrderCancellationCustomerEmailBody(String orderNumber, String customerName) {
+        String shopUrl = frontendUrl + "/products";
+        return """
+            <!DOCTYPE html><html><head><meta charset="UTF-8">
+            <style>
+                body{font-family:Arial,sans-serif;background:#f4f4f4;margin:0;padding:0}
+                .container{max-width:600px;margin:40px auto;background:white;border-radius:8px;overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,.1)}
+                .header{background:#1a1a2e;color:white;padding:30px;text-align:center}
+                .body{padding:40px 30px;color:#333}
+                .order-box{background:#f9f9f9;border:1px solid #eee;border-left:4px solid #e94560;border-radius:6px;padding:20px;margin:20px 0}
+                .order-box p{margin:6px 0;font-size:15px}
+                .btn{display:inline-block;background:#e94560;color:white;padding:14px 32px;border-radius:6px;text-decoration:none;font-weight:bold;font-size:16px;margin:20px 0}
+                .footer{background:#f4f4f4;padding:20px;text-align:center;font-size:12px;color:#aaa}
+            </style></head><body>
+            <div class="container">
+                <div class="header"><h1>Order Cancelled</h1><p style="margin:4px 0;opacity:.8">Zenenation</p></div>
+                <div class="body">
+                    <p>Hi <strong>%s</strong>,</p>
+                    <p>As requested, your order has been successfully cancelled.</p>
+                    <div class="order-box">
+                        <p><strong>Order Number:</strong> %s</p>
+                    </div>
+                    <p>If you have already paid online, your refund will be initiated shortly according to our refund policy and should reflect in your original payment method soon.</p>
+                    <a href="%s" class="btn">Continue Shopping</a>
+                </div>
+                <div class="footer">&copy; 2025 Zenenation. All rights reserved.</div>
+            </div></body></html>
+            """.formatted(customerName, orderNumber, shopUrl);
     }
 }

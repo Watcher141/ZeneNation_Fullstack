@@ -18,6 +18,9 @@ public interface EmailService {
     void sendOrderCancellationAdminEmail(String adminEmail, String orderNumber,
                                          String customerName, String totalAmount);
 
+    /** Order cancellation notification to the CUSTOMER (Added to fix compiler error) */
+    void sendOrderCancellationEmail(String toEmail, String customerName, String orderNumber);
+
     /** Abandoned cart reminder — sent 30 min after cart was last updated */
     void sendAbandonedCartEmail(String toEmail, String userName, int itemCount, double cartTotal);
 

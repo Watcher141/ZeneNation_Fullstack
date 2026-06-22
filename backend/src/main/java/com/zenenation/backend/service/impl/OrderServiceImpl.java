@@ -10,7 +10,6 @@ import com.zenenation.backend.dto.response.OrderResponse;
 import com.zenenation.backend.dto.response.PagedResponse;
 import com.zenenation.backend.dto.response.PaymentResponse;
 import com.zenenation.backend.entity.*;
-import com.zenenation.backend.entity.Coupon;
 import com.zenenation.backend.enums.OrderStatus;
 import com.zenenation.backend.enums.PaymentMethod;
 import com.zenenation.backend.enums.PaymentStatus;
@@ -40,32 +39,9 @@ import org.springframework.transaction.annotation.Transactional;
 import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.CompletableFuture;
 import java.util.stream.Collectors;
 
-/**
- * ORDER PLACEMENT FLOW:
- *
- * 1. Load current user's cart — fail if empty
- * 2. Validate delivery address belongs to user
- * 3. Validate stock for every cart item
- * 4. Calculate subtotal, delivery charge, COD charge
- *    4a. COD limit check
- *    4b. Apply coupon discount if provided
- *    4c. Apply reward points if provided (redeemPoints / 2 = rupee discount)
- *        — Requires min ₹399 subtotal, max 60% of balance
- * 5. Create Order entity with address snapshot
- * 6. Create OrderItem entities (price + name snapshots)
- * 7. Decrement stock for each product
- * 8. Create Payment record
- *    - COD: status = PENDING
- *    - ONLINE: create Razorpay order, status = PENDING
- * 9. Clear the cart
- * 10. Return OrderResponse (includes razorpayOrderId for ONLINE)
- *
- * All steps wrapped in @Transactional —
- * if anything fails, entire operation rolls back.
- * Stock is never decremented without a successful order.
- */
 @Service
 @RequiredArgsConstructor
 @Slf4j
@@ -104,7 +80,6 @@ public class OrderServiceImpl implements OrderService {
     public OrderResponse placeOrder(PlaceOrderRequest request) {
         User user = securityUtil.getCurrentUser();
 
-        // ── 1. Load cart ──────────────────────────────────────────────────
         Cart cart = cartRepository.findByUserId(user.getId())
                 .orElseThrow(() -> new ResourceNotFoundException("Cart not found"));
 
@@ -117,7 +92,6 @@ public class OrderServiceImpl implements OrderService {
             throw new BadRequestException("Your cart is empty. Add items before placing an order.");
         }
 
-        // ── 2. Validate address ───────────────────────────────────────────
         Address address = addressRepository.findById(request.getAddressId())
                 .orElseThrow(() -> new ResourceNotFoundException("Address", "id", request.getAddressId()));
 
@@ -125,7 +99,6 @@ public class OrderServiceImpl implements OrderService {
             throw new BadRequestException("Address does not belong to your account");
         }
 
-        // ── 3. Validate stock + calculate subtotal ─────────────────────
         BigDecimal subtotal = BigDecimal.ZERO;
         for (CartItem item : cartItems) {
             Product product = item.getProduct();
@@ -148,7 +121,6 @@ public class OrderServiceImpl implements OrderService {
             );
         }
 
-        // ── 4. Calculate delivery charge (weight-based) ────────────────────
         int totalWeightGrams = 0;
         for (CartItem item : cartItems) {
             Product product = item.getProduct();
@@ -158,7 +130,6 @@ public class OrderServiceImpl implements OrderService {
         var deliverySlabs = shippingConfigService.getDeliverySlabs();
         BigDecimal deliveryCharge = PriceUtil.calculateDeliveryCharge(totalWeightGrams, deliverySlabs);
 
-        // ── 4b. Calculate COD charge if applicable ────────────────────────
         BigDecimal codCharge = BigDecimal.ZERO;
         if (request.getPaymentMethod() == PaymentMethod.COD) {
             var codSlabs = shippingConfigService.getCodSlabs();
@@ -169,7 +140,6 @@ public class OrderServiceImpl implements OrderService {
                 subtotal, deliveryCharge, codCharge, BigDecimal.ZERO
         );
 
-        // ── 4c. COD limit check ───────────────────────────────────────────
         if (request.getPaymentMethod() == PaymentMethod.COD) {
             BigDecimal codLimit = BigDecimal.valueOf(appProperties.getOrder().getCodMaxAmount());
             if (totalAmount.compareTo(codLimit) > 0) {
@@ -180,7 +150,6 @@ public class OrderServiceImpl implements OrderService {
             }
         }
 
-        // ── 4d. Apply coupon if provided ──────────────────────────────────
         Coupon appliedCoupon = null;
         BigDecimal discountAmount = BigDecimal.ZERO;
 
@@ -192,32 +161,25 @@ public class OrderServiceImpl implements OrderService {
             totalAmount = PriceUtil.calculateOrderTotal(subtotal, deliveryCharge, codCharge, discountAmount);
         }
 
-        // ── 4e. Apply reward points if provided ───────────────────────────
-        // redeemPoints / 2 = rupee discount (2 pts = ₹1)
-        // Validation (min ₹399, 60% cap) is enforced inside rewardService.redeemPoints()
-        // We pass a temporary order stub for validation — actual debit happens after order save
         int rewardPointsToRedeem = (request.getRedeemPoints() != null) ? request.getRedeemPoints() : 0;
         BigDecimal rewardDiscountAmount = BigDecimal.ZERO;
         if (rewardPointsToRedeem > 0) {
-            // Validate min order & cap (throws BadRequestException if invalid)
             int maxAllowed = rewardService.getMaxRedeemablePoints(user.getId(), subtotal.doubleValue());
             if (rewardPointsToRedeem > maxAllowed) {
                 throw new BadRequestException(
                         "Cannot redeem more than " + maxAllowed + " reward points for this order"
                 );
             }
-            // Discount = floor(pts / 2) rupees
             int discountRupees = rewardPointsToRedeem / 2;
             rewardDiscountAmount = BigDecimal.valueOf(discountRupees);
             discountAmount = discountAmount.add(rewardDiscountAmount);
             totalAmount = PriceUtil.calculateOrderTotal(subtotal, deliveryCharge, codCharge, discountAmount);
-            // Ensure total is never negative
+            
             if (totalAmount.compareTo(BigDecimal.ZERO) < 0) {
                 totalAmount = BigDecimal.ZERO;
             }
         }
 
-        // ── 5. Create Order ───────────────────────────────────────────────
         Order order = Order.builder()
                 .orderNumber(OrderNumberUtil.generate())
                 .user(user)
@@ -229,7 +191,6 @@ public class OrderServiceImpl implements OrderService {
                 .status(OrderStatus.PENDING)
                 .paymentMethod(request.getPaymentMethod())
                 .paymentStatus(PaymentStatus.PENDING)
-                // Address snapshot
                 .deliveryName(address.getName())
                 .deliveryPhone(address.getPhoneNumber())
                 .deliveryAddressLine1(address.getAddressLine1())
@@ -243,12 +204,10 @@ public class OrderServiceImpl implements OrderService {
 
         order = orderRepository.save(order);
 
-        // ── 5b. Debit reward points now that order is persisted ───────────
         if (rewardPointsToRedeem > 0) {
             rewardService.redeemPoints(user.getId(), rewardPointsToRedeem, order);
         }
 
-        // ── 6. Create OrderItems + decrement stock ────────────────────────
         List<OrderItem> orderItems = new ArrayList<>();
         for (CartItem cartItem : cartItems) {
             Product product = cartItem.getProduct();
@@ -260,7 +219,6 @@ public class OrderServiceImpl implements OrderService {
                     discountedPrice, cartItem.getQuantity()
             );
 
-            // Get primary image for snapshot
             String imageUrl = productImageRepository
                     .findByProductIdAndIsPrimaryTrue(product.getId())
                     .map(ProductImage::getImageUrl)
@@ -269,21 +227,19 @@ public class OrderServiceImpl implements OrderService {
             OrderItem orderItem = OrderItem.builder()
                     .order(order)
                     .product(product)
-                    .productName(product.getName())       // snapshot
-                    .productImageUrl(imageUrl)            // snapshot
-                    .priceAtPurchase(discountedPrice)     // snapshot
+                    .productName(product.getName())
+                    .productImageUrl(imageUrl)
+                    .priceAtPurchase(discountedPrice)
                     .quantity(cartItem.getQuantity())
                     .totalPrice(lineTotal)
                     .build();
 
             orderItems.add(orderItemRepository.save(orderItem));
 
-            // Decrement stock
             product.setStockQuantity(product.getStockQuantity() - cartItem.getQuantity());
             productRepository.save(product);
         }
 
-        // ── 7. Create Payment record ──────────────────────────────────────
         Payment payment = Payment.builder()
                 .order(order)
                 .amount(totalAmount)
@@ -294,36 +250,54 @@ public class OrderServiceImpl implements OrderService {
         String razorpayOrderId = null;
 
         if (request.getPaymentMethod() == PaymentMethod.ONLINE) {
-            // Create Razorpay order
             razorpayOrderId = createRazorpayOrder(order.getId(), totalAmount);
             payment.setRazorpayOrderId(razorpayOrderId);
         }
 
         paymentRepository.save(payment);
 
-        // ── 8. Clear cart ─────────────────────────────────────────────────
         cartItemRepository.deleteByCartId(cart.getId());
 
         log.info("Order placed: orderId={}, orderNumber={}, userId={}, method={}",
                 order.getId(), order.getOrderNumber(), user.getId(), request.getPaymentMethod());
 
-        // ── 9. Send emails (async — never blocks the HTTP response) ──────
-        // Customer: order confirmation
-        emailService.sendOrderConfirmationEmail(
-                user.getEmail(),
-                order.getOrderNumber(),
-                totalAmount.toPlainString()
-        );
-        // Admin: new order notification
-        emailService.sendNewOrderAdminEmail(
-                appProperties.getAdmin().getEmail(),
-                order.getOrderNumber(),
-                user.getName(),
-                totalAmount.toPlainString(),
-                request.getPaymentMethod().name()
-        );
+        // ── SEND EMAILS ASYNC (ONLY FOR COD) ──────
+        if (request.getPaymentMethod() == PaymentMethod.COD) {
+            final String finalTotalAmount = totalAmount.toPlainString();
+            final Order finalOrder = order;
+            final String customerEmail = user.getEmail();
+            final String customerName = user.getName();
+            final String paymentMethodStr = request.getPaymentMethod().name();
+            
+            CompletableFuture.runAsync(() -> {
+                try {
+                    // 1. Send to Customer
+                    log.info("Attempting to send COD order confirmation to customer: {}", customerEmail);
+                    emailService.sendOrderConfirmationEmail(
+                            customerEmail,
+                            finalOrder.getOrderNumber(),
+                            finalTotalAmount
+                    );
+                } catch (Exception e) {
+                    log.error("Failed to send customer confirmation email: {}", e.getMessage(), e);
+                }
 
-        // Build response with razorpayOrderId so frontend can open payment modal
+                try {
+                    // 2. Send to Admin
+                    log.info("Attempting to send new COD order admin notification to zenenationstore@gmail.com");
+                    emailService.sendNewOrderAdminEmail(
+                            "zenenationstore@gmail.com",
+                            finalOrder.getOrderNumber(),
+                            customerName,
+                            finalTotalAmount,
+                            paymentMethodStr
+                    );
+                } catch (Exception e) {
+                    log.error("Failed to send admin notification email: {}", e.getMessage(), e);
+                }
+            });
+        }
+
         OrderResponse response = toOrderResponse(order, orderItems, payment, user);
         response.setRazorpayOrderId(razorpayOrderId);
         return response;
@@ -364,21 +338,18 @@ public class OrderServiceImpl implements OrderService {
         Order order = orderRepository.findByIdAndUserId(orderId, user.getId())
                 .orElseThrow(() -> new ResourceNotFoundException("Order", "id", orderId));
 
-        // Only allow cancellation before shipping
         if (order.getStatus() == OrderStatus.SHIPPED
                 || order.getStatus() == OrderStatus.DELIVERED
                 || order.getStatus() == OrderStatus.CANCELLED) {
             throw new BadRequestException(
                     "This order cannot be cancelled because it has already been " +
                     order.getStatus().name().toLowerCase() + ". " +
-                    "Once an order is shipped, cancellation is not possible. " +
-                    "Please contact us at zenenationstore@gmail.com for further assistance."
+                    "Once an order is shipped, cancellation is not possible."
             );
         }
 
         order.setStatus(OrderStatus.CANCELLED);
 
-        // Restore stock for all items
         List<OrderItem> items = orderItemRepository.findByOrderId(orderId);
         for (OrderItem item : items) {
             if (item.getProduct() != null) {
@@ -391,13 +362,37 @@ public class OrderServiceImpl implements OrderService {
         order = orderRepository.save(order);
         log.info("Order cancelled: orderId={}, userId={}", orderId, user.getId());
 
-        // Notify admin of cancellation (async — never blocks response)
-        emailService.sendOrderCancellationAdminEmail(
-                appProperties.getAdmin().getEmail(),
-                order.getOrderNumber(),
-                user.getName(),
-                order.getTotalAmount().toPlainString()
-        );
+        // ── SEND CANCELLATION EMAILS ASYNC ──────
+        final Order finalOrder = order;
+        final String customerEmail = user.getEmail();
+        final String customerName = user.getName();
+        
+        CompletableFuture.runAsync(() -> {
+            try {
+                // 1. Notify Admin
+                log.info("Attempting to send admin cancellation email to zenenationstore@gmail.com");
+                emailService.sendOrderCancellationAdminEmail(
+                        "zenenationstore@gmail.com",
+                        finalOrder.getOrderNumber(),
+                        customerName,
+                        finalOrder.getTotalAmount().toPlainString()
+                );
+            } catch (Exception e) {
+                log.error("Failed to send admin cancellation email: {}", e.getMessage(), e);
+            }
+
+            try {
+                // 2. Notify Customer
+                log.info("Attempting to send customer cancellation email to {}", customerEmail);
+                emailService.sendOrderCancellationEmail(
+                        customerEmail,
+                        customerName,
+                        finalOrder.getOrderNumber()
+                    );
+            } catch (Exception e) {
+                log.error("Failed to send customer cancellation email: {}", e.getMessage(), e);
+            }
+        });
 
         Payment payment = paymentRepository.findByOrderId(orderId).orElse(null);
         return toOrderResponse(order, items, payment, user);
@@ -450,14 +445,12 @@ public class OrderServiceImpl implements OrderService {
         OrderStatus newStatus = request.getStatus();
         OrderStatus currentStatus = order.getStatus();
 
-        // Prevent invalid status transitions
         if (currentStatus == OrderStatus.CANCELLED || currentStatus == OrderStatus.DELIVERED) {
             throw new BadRequestException(
                     "Cannot update status of a " + currentStatus + " order"
             );
         }
 
-        // Mark payment as PAID when admin confirms COD delivery
         if (newStatus == OrderStatus.DELIVERED
                 && order.getPaymentMethod() == PaymentMethod.COD) {
             Payment payment = paymentRepository.findByOrderId(orderId).orElse(null);
@@ -468,11 +461,9 @@ public class OrderServiceImpl implements OrderService {
             order.setPaymentStatus(PaymentStatus.PAID);
         }
 
-        // Credit rewards when order is DELIVERED
         if (newStatus == OrderStatus.DELIVERED) {
             rewardService.creditOrderRewards(order);
         }
-        // Refund redeemed points if order is CANCELLED
         if (newStatus == OrderStatus.CANCELLED) {
             rewardService.refundRedeemedPoints(order);
         }
@@ -494,11 +485,6 @@ public class OrderServiceImpl implements OrderService {
     // RAZORPAY
     // -------------------------------------------------------------------------
 
-    /**
-     * Creates a Razorpay order via Razorpay API.
-     * Returns the Razorpay order ID used by frontend to open payment modal.
-     * Amount is in paise (Razorpay standard) — multiply rupees by 100.
-     */
     private String createRazorpayOrder(Long ourOrderId, BigDecimal amount) {
         try {
             RazorpayClient client = new RazorpayClient(razorpayKeyId, razorpayKeySecret);
@@ -527,7 +513,6 @@ public class OrderServiceImpl implements OrderService {
 
     private OrderResponse toOrderResponse(Order order, List<OrderItem> items,
                                            Payment payment, User user) {
-        // Fetch items if not provided
         List<OrderItem> orderItems = items != null
                 ? items
                 : orderItemRepository.findByOrderId(order.getId());
