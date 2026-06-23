@@ -1,13 +1,13 @@
 /* src/pages/user/OrdersPage.css */
 
 .orders-page {
-  padding-top: var(--space-8);
+  padding-top: var(--space-6);
   padding-bottom: var(--space-8);
 }
 
 .orders-title {
   font-size: var(--text-2xl);
-  margin-bottom: var(--space-8);
+  margin-bottom: var(--space-6);
 }
 
 .orders-list {
@@ -30,7 +30,7 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: var(--space-4) var(--space-6);
+  padding: var(--space-4) var(--space-5);
   border-bottom: 1px solid var(--border-primary);
   background: var(--bg-tertiary);
   flex-wrap: wrap;
@@ -44,7 +44,7 @@
 }
 
 .order-card-items {
-  padding: var(--space-4) var(--space-6);
+  padding: var(--space-4) var(--space-5);
   display: flex;
   flex-direction: column;
   gap: var(--space-3);
@@ -80,18 +80,87 @@
   font-size: var(--text-sm);
   font-weight: var(--font-medium);
   color: var(--text-primary);
+  /* Truncate long names on mobile */
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 250px; 
 }
 
 .order-card-footer {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: var(--space-4) var(--space-6);
+  padding: var(--space-4) var(--space-5);
   border-top: 1px solid var(--border-primary);
   background: var(--bg-tertiary);
+  gap: var(--space-3);
 }
 
-@media (max-width: 768px) {
-  .order-card-header { flex-direction: column; align-items: flex-start; }
-  .order-card-footer { flex-direction: column; gap: var(--space-3); }
+/* --- Falling Stars (Triggered from Checkout) --- */
+.falling-stars-container {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 9999;
+  overflow: hidden;
+}
+
+.star {
+  position: absolute;
+  top: -10%;
+  color: #FFD700;
+  opacity: 0;
+  animation: fall linear forwards;
+  text-shadow: 0 0 15px rgba(255, 215, 0, 1);
+}
+
+@keyframes fall {
+  0% { transform: translateY(0) rotate(0deg) scale(1); opacity: 0; }
+  10% { opacity: 1; }
+  80% { opacity: 1; }
+  100% { transform: translateY(110vh) rotate(360deg) scale(0.5); opacity: 0; }
+}
+
+/* ── MOBILE RESPONSIVE FIXES ── */
+@media (max-width: 600px) {
+  .orders-page {
+    padding-top: var(--space-4);
+  }
+  
+  .order-card-header { 
+    flex-direction: column; 
+    align-items: flex-start; 
+    padding: var(--space-3) var(--space-4);
+  }
+  
+  .order-card-header > div:last-child {
+    width: 100%;
+    justify-content: flex-start;
+  }
+  
+  .order-card-items {
+    padding: var(--space-3) var(--space-4);
+  }
+  
+  .order-item-name {
+    /* Allow text to wrap on very small screens instead of cutting off completely */
+    white-space: normal; 
+    max-width: 100%;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+  }
+  
+  .order-card-footer { 
+    flex-direction: column; 
+    align-items: stretch; /* Makes buttons take full width */
+    padding: var(--space-4);
+  }
+  
+  .order-card-footer button {
+    width: 100%;
+    padding: 10px;
+    margin-top: 8px;
+  }
 }

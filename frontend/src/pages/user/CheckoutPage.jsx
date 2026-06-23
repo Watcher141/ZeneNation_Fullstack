@@ -38,6 +38,9 @@ const CheckoutPage = () => {
   const [useRewards, setUseRewards] = useState(false);
   const [preorderPaymentType, setPreorderPaymentType] = useState('FULL');
   const [shippingConfig, setShippingConfig] = useState(null);
+  
+  // ── NEW: State to trigger the success animation ──
+  const [orderSuccess, setOrderSuccess] = useState(false);
 
   // Must be defined before derived calculations
   const items = cart?.items || [];
@@ -111,6 +114,13 @@ const CheckoutPage = () => {
       .finally(() => setLoading(false));
   }, []);
 
+  // Force ONLINE payment if cart has preorder items
+  useEffect(() => {
+    if (hasPreorderItems && paymentMethod === 'COD') {
+      setPaymentMethod('ONLINE');
+    }
+  }, [hasPreorderItems, paymentMethod]);
+
   const handleApplyCoupon = async () => {
     if (!couponCode.trim()) return;
     setCouponLoading(true);
@@ -164,8 +174,12 @@ const CheckoutPage = () => {
         openRazorpay(order);
       } else {
         await fetchCart();
-        toast.success('Order placed successfully!');
-        navigate('/orders');
+        
+        // ── NEW: Trigger success animation instead of immediate redirect ──
+        setOrderSuccess(true);
+        setTimeout(() => {
+          navigate('/orders');
+        }, 3000); 
       }
     } catch (err) {
       toast.error(err.response?.data?.message || 'Failed to place order');
@@ -190,8 +204,13 @@ const CheckoutPage = () => {
             razorpaySignature: response.razorpay_signature,
           });
           await fetchCart();
-          toast.success('Payment successful! Order confirmed.');
-          navigate('/orders');
+          
+          // ── NEW: Trigger success animation for online payment ──
+          setOrderSuccess(true);
+          setTimeout(() => {
+            navigate('/orders');
+          }, 4500);
+          
         } catch {
           toast.error('Payment verification failed. Contact support.');
           navigate('/orders');
@@ -211,6 +230,30 @@ const CheckoutPage = () => {
   };
 
   if (loading) return <Loader fullPage />;
+
+  // ── NEW: Render the Luck Royale Animation if order is successful ──
+  if (orderSuccess) {
+    return (
+      <div className="success-screen-black">
+        {/* Falling Stars */}
+        <div className="falling-stars">
+          {[...Array(20)].map((_, i) => (
+            <div key={i} className="star" style={{ 
+              left: `${Math.random() * 100}%`, 
+              animationDelay: `${Math.random() * 2}s`,
+              animationDuration: `${1 + Math.random() * 2}s`
+            }}>★</div>
+          ))}
+        </div>
+
+        {/* Sliding Yellow Banner */}
+        <div className="yellow-banner">
+          <h1 className="banner-text">CONGRATULATIONS !!</h1>
+          <p className="banner-subtext">Your order has been placed</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="page-wrapper">
@@ -309,13 +352,30 @@ const CheckoutPage = () => {
                 <MdPayment size={20} color="var(--accent-primary)" /> Payment Method
               </h2>
               <div className="payment-options">
-                <label className={`payment-option ${paymentMethod === 'COD' ? 'selected' : ''}`}>
+                <label 
+                  className={`payment-option ${paymentMethod === 'COD' ? 'selected' : ''}`}
+                  style={{ 
+                    opacity: hasPreorderItems ? 0.5 : 1, 
+                    cursor: hasPreorderItems ? 'not-allowed' : 'pointer' 
+                  }}
+                >
                   <input type="radio" name="payment" value="COD"
-                    checked={paymentMethod === 'COD'} onChange={() => setPaymentMethod('COD')} />
+                    disabled={hasPreorderItems}
+                    checked={paymentMethod === 'COD'} 
+                    onChange={() => setPaymentMethod('COD')} 
+                  />
                   <BsCash size={24} color="var(--accent-secondary)" />
                   <div>
                     <div style={{ fontWeight: 600 }}>Cash on Delivery</div>
-                    <div className="text-xs text-muted">Pay when your order arrives (max Rs.{codLimit.toLocaleString('en-IN')})</div>
+                    {hasPreorderItems ? (
+                      <div className="text-xs" style={{ color: 'var(--accent-red)' }}>
+                        Not available for pre-order items
+                      </div>
+                    ) : (
+                      <div className="text-xs text-muted">
+                        Pay when your order arrives (max Rs.{codLimit.toLocaleString('en-IN')})
+                      </div>
+                    )}
                   </div>
                 </label>
                 <label className={`payment-option ${paymentMethod === 'ONLINE' ? 'selected' : ''}`}>
@@ -379,6 +439,28 @@ const CheckoutPage = () => {
               <h2 className="checkout-section-title">
                 <MdShoppingCart size={20} color="var(--accent-primary)" /> Order Summary
               </h2>
+
+              {/* ── NEW ESTIMATED DELIVERY BOX ── */}
+              <div style={{ 
+                background: 'var(--bg-secondary)', 
+                padding: 'var(--space-3)', 
+                borderRadius: 'var(--border-radius-md)', 
+                marginBottom: 'var(--space-4)',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '12px',
+                border: '1px solid var(--border-color)'
+              }}>
+                <MdLocalShipping size={24} color={hasPreorderItems ? "var(--accent-secondary)" : "var(--accent-green)"} />
+                <div>
+                  <div style={{ fontSize: 'var(--text-sm)', fontWeight: 600 }}>Estimated Delivery</div>
+                  <div style={{ fontSize: 'var(--text-xs)', color: 'var(--text-muted)', marginTop: '2px' }}>
+                    {hasPreorderItems 
+                      ? '14-20 Days (Includes pre-order processing)' 
+                      : '5-10 Days (Standard Shipping)'}
+                  </div>
+                </div>
+              </div>
 
               <div className="checkout-items">
                 {items.map(item => (

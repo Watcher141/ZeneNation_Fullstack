@@ -1,10 +1,10 @@
 // src/pages/user/OrdersPage.jsx
 import { useState, useEffect, useCallback } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
 import { orderApi } from '../../api/apiCollections';
 import Loader from '../../components/common/Loader';
 import toast from 'react-hot-toast';
-import { MdInfo, MdInventory2, MdImage, MdLock, MdShoppingBag } from 'react-icons/md';
+import { MdInfo, MdInventory2, MdImage, MdLock, MdLocalShipping } from 'react-icons/md';
 import './OrdersPage.css';
 
 const statusBadge = {
@@ -18,11 +18,15 @@ const statusBadge = {
 };
 
 const OrdersPage = () => {
+  const location = useLocation();
   const [orders, setOrders] = useState([]);
   const [pagination, setPagination] = useState({});
   const [loading, setLoading] = useState(true);
   const [page, setPage] = useState(0);
   const [cancellingId, setCancellingId] = useState(null);
+  
+  // ── Catch the trigger flag from CheckoutPage ──
+  const [showStars, setShowStars] = useState(location.state?.showStars || false);
 
   const fetchOrders = useCallback(async () => {
     setLoading(true);
@@ -35,6 +39,18 @@ const OrdersPage = () => {
   }, [page]);
 
   useEffect(() => { fetchOrders(); }, [fetchOrders]);
+
+  // ── Handle Animation Cleanup ──
+  useEffect(() => {
+    if (showStars) {
+      // Clear router state so it doesn't replay on page refresh
+      window.history.replaceState({}, document.title);
+      
+      // Remove animation from DOM after 4 seconds (3.5s animation + 0.5s fade)
+      const timer = setTimeout(() => setShowStars(false), 4000);
+      return () => clearTimeout(timer);
+    }
+  }, [showStars]);
 
   const handleCancel = async (orderId) => {
     if (!window.confirm('Cancel this order?')) return;
@@ -52,6 +68,43 @@ const OrdersPage = () => {
 
   return (
     <div className="page-wrapper">
+      
+      {/* ── EPIC SUCCESS OVERLAY ── */}
+      {showStars && (
+        <div className="epic-success-overlay">
+          {/* Falling Glowing Stars */}
+          <div className="stars-container">
+            {[...Array(40)].map((_, i) => {
+              const size = Math.random() * 2 + 0.5; // Random size
+              return (
+                <div 
+                  key={i} 
+                  className="epic-star" 
+                  style={{ 
+                    left: `${Math.random() * 100}%`, 
+                    animationDelay: `${Math.random() * 3}s`,
+                    animationDuration: `${2 + Math.random() * 3}s`,
+                    fontSize: `${size}rem`,
+                    opacity: Math.random() * 0.8 + 0.2
+                  }}
+                >
+                  ★
+                </div>
+              );
+            })}
+          </div>
+
+          {/* The Glowing Skewed Banner */}
+          <div className="epic-yellow-banner">
+            <div className="epic-banner-content">
+              <h1>CONGRATULATIONS !!</h1>
+              <p>Your order has been placed</p>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── MAIN ORDERS CONTENT ── */}
       <div className="container orders-page">
         <h1 className="orders-title">My Orders</h1>
 
@@ -132,12 +185,30 @@ const OrdersPage = () => {
                   </div>
 
                   <div className="order-card-footer">
-                    <div>
-                      <span className="text-muted text-sm">Total: </span>
-                      <span className="text-gold" style={{ fontWeight: 700, fontSize: 'var(--text-lg)' }}>
-                        ₹{Number(order.totalAmount).toLocaleString('en-IN')}
-                      </span>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                      <div>
+                        <span className="text-muted text-sm">Total: </span>
+                        <span className="text-gold" style={{ fontWeight: 700, fontSize: 'var(--text-lg)' }}>
+                          ₹{Number(order.totalAmount).toLocaleString('en-IN')}
+                        </span>
+                      </div>
+                      
+                      {/* Static Delivery Note */}
+                      {order.status !== 'CANCELLED' && (
+                        <div style={{ 
+                          display: 'flex', 
+                          alignItems: 'center', 
+                          gap: '6px', 
+                          color: 'var(--accent-green)', 
+                          fontSize: 'var(--text-sm)',
+                          fontWeight: 500
+                        }}>
+                          <MdLocalShipping size={16} />
+                          <span>Estimated delivery: 5-10 Days</span>
+                        </div>
+                      )}
                     </div>
+
                     <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
                       {(order.status === 'PENDING' || order.status === 'CONFIRMED') && (
                         <button className="btn btn-sm"
