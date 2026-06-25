@@ -14,24 +14,21 @@ import java.util.Optional;
 /**
  * All listing queries:
  * 1. JOIN FETCH p.category — prevents LazyInitializationException
- * 2. AND p.isPreorder = false — preorder products are EXCLUDED from all regular
- *    listings (browse, category, search, new arrivals). They only appear via
- *    findAllPreorderProducts() which is called by the dedicated preorder endpoint.
+ * Note: Preorder products are now INCLUDED in standard public listings 
+ * so they will appear naturally in categories and searches.
  */
 @Repository
 public interface ProductRepository extends JpaRepository<Product, Long> {
 
-    // ── PUBLIC LISTINGS (non-preorder only) ──────────────────────────────────
+    // ── PUBLIC LISTINGS (Now includes preorders) ─────────────────────────────
 
     @Query(value = """
             SELECT p FROM Product p JOIN FETCH p.category
             WHERE p.isDeleted = false AND p.isActive = true
-            AND p.isPreorder = false
             """,
            countQuery = """
             SELECT COUNT(p) FROM Product p
             WHERE p.isDeleted = false AND p.isActive = true
-            AND p.isPreorder = false
             """)
     Page<Product> findByIsDeletedFalseAndIsActiveTrue(Pageable pageable);
 
@@ -39,19 +36,17 @@ public interface ProductRepository extends JpaRepository<Product, Long> {
             SELECT p FROM Product p JOIN FETCH p.category
             WHERE p.category.id = :categoryId
             AND p.isDeleted = false AND p.isActive = true
-            AND p.isPreorder = false
             """,
            countQuery = """
             SELECT COUNT(p) FROM Product p
             WHERE p.category.id = :categoryId
             AND p.isDeleted = false AND p.isActive = true
-            AND p.isPreorder = false
             """)
     Page<Product> findByCategoryIdAndIsDeletedFalseAndIsActiveTrue(
             @Param("categoryId") Long categoryId, Pageable pageable);
 
     /** Fetch products in a category AND all its subcategories */
-    @Query("SELECT p FROM Product p WHERE p.isDeleted = false AND p.isActive = true AND (p.category.id = :categoryId OR p.category.parent.id = :categoryId) ORDER BY p.createdAt DESC")
+    @Query("SELECT p FROM Product p JOIN FETCH p.category WHERE p.isDeleted = false AND p.isActive = true AND (p.category.id = :categoryId OR p.category.parent.id = :categoryId) ORDER BY p.createdAt DESC")
     Page<Product> findByCategoryOrSubcategoriesAndIsActiveTrue(
             @Param("categoryId") Long categoryId, Pageable pageable);
 
@@ -70,14 +65,12 @@ public interface ProductRepository extends JpaRepository<Product, Long> {
     @Query(value = """
             SELECT p FROM Product p JOIN FETCH p.category
             WHERE p.isDeleted = false AND p.isActive = true
-            AND p.isPreorder = false
             AND (LOWER(p.name) LIKE LOWER(CONCAT('%', :keyword, '%'))
                 OR LOWER(p.description) LIKE LOWER(CONCAT('%', :keyword, '%')))
             """,
            countQuery = """
             SELECT COUNT(p) FROM Product p
             WHERE p.isDeleted = false AND p.isActive = true
-            AND p.isPreorder = false
             AND (LOWER(p.name) LIKE LOWER(CONCAT('%', :keyword, '%'))
                 OR LOWER(p.description) LIKE LOWER(CONCAT('%', :keyword, '%')))
             """)
@@ -86,7 +79,6 @@ public interface ProductRepository extends JpaRepository<Product, Long> {
     @Query(value = """
             SELECT p FROM Product p JOIN FETCH p.category
             WHERE p.isDeleted = false AND p.isActive = true
-            AND p.isPreorder = false
             AND p.category.id = :categoryId
             AND (LOWER(p.name) LIKE LOWER(CONCAT('%', :keyword, '%'))
                 OR LOWER(p.description) LIKE LOWER(CONCAT('%', :keyword, '%')))
@@ -94,7 +86,6 @@ public interface ProductRepository extends JpaRepository<Product, Long> {
            countQuery = """
             SELECT COUNT(p) FROM Product p
             WHERE p.isDeleted = false AND p.isActive = true
-            AND p.isPreorder = false
             AND p.category.id = :categoryId
             AND (LOWER(p.name) LIKE LOWER(CONCAT('%', :keyword, '%'))
                 OR LOWER(p.description) LIKE LOWER(CONCAT('%', :keyword, '%')))
@@ -107,7 +98,7 @@ public interface ProductRepository extends JpaRepository<Product, Long> {
     boolean existsBySlug(String slug);
 
 
-    // ── PREORDER ONLY ─────────────────────────────────────────────────────────
+    // ── PREORDER ONLY (For dedicated Epic Drops / Preorder pages) ────────────
 
     @Query(value = """
         SELECT p FROM Product p JOIN FETCH p.category
@@ -139,10 +130,7 @@ public interface ProductRepository extends JpaRepository<Product, Long> {
     Page<Product> findByCategoryIdAndIsDeletedFalse(
             @Param("categoryId") Long categoryId, Pageable pageable);
 
-
-
-
-@Query(value = """
+    @Query(value = """
         SELECT p FROM Product p JOIN FETCH p.category
         WHERE p.isDeleted = false
         AND (LOWER(p.name) LIKE LOWER(CONCAT('%', :keyword, '%'))
@@ -154,5 +142,5 @@ public interface ProductRepository extends JpaRepository<Product, Long> {
         AND (LOWER(p.name) LIKE LOWER(CONCAT('%', :keyword, '%'))
             OR LOWER(p.category.name) LIKE LOWER(CONCAT('%', :keyword, '%')))
         """)
-Page<Product> searchAdminByKeyword(@Param("keyword") String keyword, Pageable pageable);
+    Page<Product> searchAdminByKeyword(@Param("keyword") String keyword, Pageable pageable);
 }
