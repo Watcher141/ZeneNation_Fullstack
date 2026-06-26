@@ -17,19 +17,21 @@ import {
   MdChevronLeft,
   MdChevronRight,
   MdLocalShipping,
+  MdLayers,
 } from 'react-icons/md';
 import './AdminLayout.css';
 
 const navItems = [
-  { path: '/admin',            icon: MdDashboard,   label: 'Dashboard'  },
-  { path: '/admin/categories', icon: MdCategory,    label: 'Categories' },
-  { path: '/admin/products',   icon: MdInventory2,  label: 'Products'   },
-  { path: '/admin/orders',     icon: MdShoppingBag, label: 'Orders'     },
-  { path: '/admin/coupons',    icon: MdLocalOffer,  label: 'Coupons'    },
-  { path: '/admin/users',      icon: MdPeople,      label: 'Users'      },
-  { path: '/admin/shipping',   icon: MdLocalShipping, label: 'Shipping Config' },
-  { path: '/admin/announcements', icon: MdCampaign,  label: 'Announcements' },
-  { path: '/admin/home-sections',  icon: MdHome,      label: 'Home Sections' },
+  { path: '/admin',               icon: MdDashboard,     label: 'Dashboard'       },
+  { path: '/admin/categories',    icon: MdCategory,      label: 'Categories'      },
+  { path: '/admin/products',      icon: MdInventory2,    label: 'Products'        },
+  { path: '/admin/orders',        icon: MdShoppingBag,   label: 'Orders'          },
+  { path: '/admin/bundles',       icon: MdLayers,        label: 'FBT Bundles'     },
+  { path: '/admin/coupons',       icon: MdLocalOffer,    label: 'Coupons'         },
+  { path: '/admin/users',         icon: MdPeople,        label: 'Users'           },
+  { path: '/admin/shipping',      icon: MdLocalShipping, label: 'Shipping Config' },
+  { path: '/admin/announcements', icon: MdCampaign,      label: 'Announcements'   },
+  { path: '/admin/home-sections', icon: MdHome,          label: 'Home Sections'   },
 ];
 
 const AdminLayout = ({ children }) => {
@@ -120,7 +122,6 @@ const AdminLayout = ({ children }) => {
 
       {/* Main content */}
       <main className={`admin-main ${collapsed ? 'collapsed' : ''}`}>
-        {/* Mobile top bar */}
         <div className="admin-mobile-topbar">
           <button className="admin-hamburger" onClick={() => setMobileOpen(true)}>
             <MdMenu size={24} />

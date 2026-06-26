@@ -43,12 +43,12 @@ import AdminUsers from './pages/admin/AdminUsers';
 import AdminAnnouncements from './pages/admin/AdminAnnouncements';
 import AdminHomeSections from './pages/admin/AdminHomeSections';
 import AdminShippingConfig from './pages/admin/AdminShippingConfig';
+import FbtAdminManager from './pages/admin/FbtAdminManager';
 
 const AppLayout = ({ children }) => (
   <>
     <Navbar />
     <AnnouncementBanner />
-
     <main style={{ paddingTop: 'calc(var(--navbar-height, 70px) )' }}>
       {children}
     </main>
@@ -78,8 +78,6 @@ const App = () => {
           <ScrollToTop />
           <Routes>
             {/* ── Public ── */}
-            {/*Removed <Route path="/" element={<LandingPage />} />*/}
-            {/**Modified Path='/' will now lead to <AppLayout> */}
             <Route path="/" element={<AppLayout><HomePage /></AppLayout>} />
             <Route path="/products" element={<AppLayout><ProductsPage /></AppLayout>} />
             <Route path="/products/:slug" element={<AppLayout><ProductDetailPage /></AppLayout>} />
@@ -105,6 +103,7 @@ const App = () => {
             <Route path="/admin/categories" element={<AdminRoute><AdminCategories /></AdminRoute>} />
             <Route path="/admin/products" element={<AdminRoute><AdminProducts /></AdminRoute>} />
             <Route path="/admin/orders" element={<AdminRoute><AdminOrders /></AdminRoute>} />
+            <Route path="/admin/bundles" element={<AdminRoute><FbtAdminManager /></AdminRoute>} />
             <Route path="/admin/coupons" element={<AdminRoute><AdminCoupons /></AdminRoute>} />
             <Route path="/admin/users" element={<AdminRoute><AdminUsers /></AdminRoute>} />
             <Route path="/admin/announcements" element={<AdminRoute><AdminAnnouncements /></AdminRoute>} />

@@ -7,6 +7,7 @@ import { useAuth } from '../../context/AuthContext';
 import Loader from '../../components/common/Loader';
 import StarRating from '../../components/product/StarRating';
 import ProductReviews from '../../components/product/ProductReviews';
+import FrequentlyBoughtTogether from '../../components/product/FrequentlyBoughtTogether';
 import { MdShoppingCart, MdImage, MdCheckCircle, MdCancel, MdFitnessCenter } from 'react-icons/md';
 import HorizontalScroll from '../../components/common/HorizontalScroll';
 import ProductCard from '../../components/product/ProductCard';
@@ -25,16 +26,11 @@ const ProductDetailPage = () => {
   const [adding, setAdding] = useState(false);
   const [suggestions, setSuggestions] = useState([]);
 
-  // Fetch suggestions when product loads
   useEffect(() => {
     if (!product) return;
-
     const fetchSuggestions = async () => {
       try {
-        // Always use parent category for broader results
-        // If product is in a subcategory, parentId exists; otherwise use category.id
         const catId = product.category?.parentId || product.category?.id;
-
         if (catId) {
           const res = await productApi.getByCategory(catId, { page: 0, size: 20 });
           const all = res.data.data?.content || [];
@@ -44,15 +40,12 @@ const ProductDetailPage = () => {
             return;
           }
         }
-
-        // Fallback — latest products from whole store
         const res = await productApi.getAll({ page: 0, size: 12, sortBy: 'createdAt', sortDir: 'desc' });
         setSuggestions((res.data.data?.content || []).filter(p => p.id !== product.id).slice(0, 10));
       } catch {
         // silent fail
       }
     };
-
     fetchSuggestions();
   }, [product?.id]);
 
@@ -86,6 +79,9 @@ const ProductDetailPage = () => {
   const hasDiscount = product.discountPercent > 0;
   const images = product.images || [];
   const currentImage = images[selectedImage];
+
+  // Use parent category ID for FBT lookup; fall back to own category if already a parent
+  const fbtCategoryId = product.category?.parentId || product.category?.id;
 
   return (
     <div className="page-wrapper">
@@ -121,7 +117,6 @@ const ProductDetailPage = () => {
               <p className="product-detail-tagline">"{product.tagline}"</p>
             )}
 
-            {/* Rating preview */}
             {product.averageRating > 0 && (
               <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                 <StarRating rating={product.averageRating} size={18} showNumber />
@@ -150,7 +145,8 @@ const ProductDetailPage = () => {
               }
               {product.weightGrams > 0 && (
                 <span className="badge badge-blue" style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-                  <MdFitnessCenter size={13} style={{ verticalAlign: 'middle', marginRight: 4 }} />{product.weightGrams >= 1000 ? `${(product.weightGrams / 1000).toFixed(2)} kg` : `${product.weightGrams}g`}
+                  <MdFitnessCenter size={13} style={{ verticalAlign: 'middle', marginRight: 4 }} />
+                  {product.weightGrams >= 1000 ? `${(product.weightGrams / 1000).toFixed(2)} kg` : `${product.weightGrams}g`}
                 </span>
               )}
             </div>
@@ -182,6 +178,15 @@ const ProductDetailPage = () => {
             </div>
           </div>
         </div>
+
+        {/* ── Frequently Bought Together ── */}
+        {/* ── Frequently Bought Together ── */}
+        {product.category?.id && (
+        <FrequentlyBoughtTogether
+          categoryId={product.category.id}
+          parentCategoryId={product.category.parentId || product.category.id}
+        />
+        )}
 
         {/* ── You May Also Like ── */}
         {suggestions.length > 0 && (
