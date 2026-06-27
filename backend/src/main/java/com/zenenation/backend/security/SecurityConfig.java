@@ -36,13 +36,8 @@ public class SecurityConfig {
     private final JwtAuthEntryPoint jwtAuthEntryPoint;
     private final OAuth2SuccessHandler oAuth2SuccessHandler;
 
-    /** Injected from FRONTEND_URL env var → application.yml → app.cors.allowed-origins */
     @Value("${app.cors.allowed-origins:http://localhost:5173}")
     private List<String> corsAllowedOrigins;
-
-    // =========================================================================
-    // SECURITY FILTER CHAIN
-    // =========================================================================
 
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
@@ -71,6 +66,7 @@ public class SecurityConfig {
                 .requestMatchers(HttpMethod.GET, "/api/v1/announcements/active").permitAll()
                 .requestMatchers(HttpMethod.GET, "/api/v1/home-sections/active").permitAll()
                 .requestMatchers(HttpMethod.GET, "/api/v1/shipping/config").permitAll()
+                .requestMatchers(HttpMethod.GET, "/api/v1/fbt-sets/for-product").permitAll()
 
                 // ── ADMIN ─────────────────────────────────────────────────────
                 .requestMatchers("/api/v1/admin/**").hasRole("ADMIN")
@@ -103,10 +99,6 @@ public class SecurityConfig {
         return http.build();
     }
 
-    // =========================================================================
-    // AUTHENTICATION BEANS
-    // =========================================================================
-
     @Bean
     public AuthenticationProvider authenticationProvider() {
         DaoAuthenticationProvider provider = new DaoAuthenticationProvider();
@@ -126,29 +118,18 @@ public class SecurityConfig {
         return new BCryptPasswordEncoder(12);
     }
 
-    // =========================================================================
-    // CORS CONFIGURATION
-    // Origins are injected via @Value from app.cors.allowed-origins in yml
-    // which reads from FRONTEND_URL environment variable on Render/prod
-    // =========================================================================
-
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration config = new CorsConfiguration();
 
-        // Build origins list — always include localhost for local dev
         List<String> origins = new ArrayList<>();
         origins.add("http://localhost:3000");
         origins.add("http://localhost:5173");
-        // Wildcard for all Vercel preview deployments
         origins.add("https://*.vercel.app");
-        // Wildcard for Render preview deployments
         origins.add("https://*.onrender.com");
-        // Add all origins from env (includes production URL)
         if (corsAllowedOrigins != null) {
             origins.addAll(corsAllowedOrigins);
         }
-        // config.setAllowedOriginPatterns(origins);
         config.setAllowedOriginPatterns(List.of(
             "https://zenenation.in",
             "https://www.zenenation.in",

@@ -11,7 +11,6 @@ export const CartProvider = ({ children }) => {
   const [cartCount, setCartCount] = useState(0);
   const [loading, setLoading] = useState(false);
 
-  // Fetch cart when user logs in
   useEffect(() => {
     if (isAuthenticated()) {
       fetchCart();
@@ -34,8 +33,11 @@ export const CartProvider = ({ children }) => {
     }
   };
 
-  const addToCart = async (productId, quantity = 1) => {
-    const res = await cartApi.addToCart({ productId, quantity });
+  const addToCart = async (productId, quantity = 1, bundlePrice = null, bundleGroupId = null) => {
+    const payload = { productId, quantity };
+    if (bundlePrice !== null) payload.bundlePrice = bundlePrice;
+    if (bundleGroupId !== null) payload.bundleGroupId = bundleGroupId;
+    const res = await cartApi.addToCart(payload);
     setCart(res.data.data);
     setCartCount(res.data.data?.totalQuantity || 0);
     return res.data.data;
@@ -53,6 +55,12 @@ export const CartProvider = ({ children }) => {
     setCartCount(res.data.data?.totalQuantity || 0);
   };
 
+  const removeBundleGroup = async (bundleGroupId) => {
+    const res = await cartApi.removeBundleGroup(bundleGroupId);
+    setCart(res.data.data);
+    setCartCount(res.data.data?.totalQuantity || 0);
+  };
+
   const clearCart = async () => {
     const res = await cartApi.clearCart();
     setCart(res.data.data);
@@ -60,7 +68,10 @@ export const CartProvider = ({ children }) => {
   };
 
   return (
-    <CartContext.Provider value={{ cart, cartCount, loading, fetchCart, addToCart, updateItem, removeItem, clearCart }}>
+    <CartContext.Provider value={{
+      cart, cartCount, loading, fetchCart,
+      addToCart, updateItem, removeItem, removeBundleGroup, clearCart
+    }}>
       {children}
     </CartContext.Provider>
   );

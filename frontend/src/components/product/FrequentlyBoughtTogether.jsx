@@ -8,16 +8,160 @@ import { useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import './FrequentlyBoughtTogether.css';
 
+const calcDiscounted = (price, discountPercent) => {
+  const p = Number(price || 0);
+  const d = Number(discountPercent || 0);
+  return d > 0 ? p * (1 - d / 100) : p;
+};
+
+const fmt = (amount) =>
+  '₹' + Number(amount).toLocaleString('en-IN', {
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 2
+  });
+
+const generateGroupId = () =>
+  'bundle-' + Date.now() + '-' + Math.random().toString(36).slice(2, 7);
+
+const BundleCard = ({ bundle, onAddToCart, addingToCart }) => {
+  const allProducts = bundle.products || [];
+  const [checkedIds, setCheckedIds] = useState(() => new Set(allProducts.map(p => p.id)));
+
+  const checkedProducts = allProducts.filter(p => checkedIds.has(p.id));
+  const checkedCount = checkedProducts.length;
+  const totalCount = allProducts.length;
+  const deselectedCount = totalCount - checkedCount;
+  const baseDiscount = Number(bundle.discountPercent || 0);
+  const effectiveDiscount = Math.max(0, baseDiscount - deselectedCount * 20);
+
+  const checkedSubtotal = checkedProducts.reduce(
+    (sum, p) => sum + calcDiscounted(p.price, p.discountPercent), 0
+  );
+  const finalTotal = checkedSubtotal * (1 - effectiveDiscount / 100);
+  const savedAmount = checkedSubtotal - finalTotal;
+
+  const toggleProduct = (id) => {
+    if (checkedIds.has(id) && checkedCount === 1) return;
+    setCheckedIds(prev => {
+      const next = new Set(prev);
+      next.has(id) ? next.delete(id) : next.add(id);
+      return next;
+    });
+  };
+
+  const handleAdd = () => {
+    if (checkedProducts.length === 0) return;
+    const bundleGroupId = generateGroupId();
+    const proportionalPrices = checkedProducts.map(p => {
+      const productDiscounted = calcDiscounted(p.price, p.discountPercent);
+      const share = checkedSubtotal > 0
+        ? productDiscounted / checkedSubtotal
+        : 1 / checkedProducts.length;
+      return {
+        id: p.id,
+        bundlePrice: Number((finalTotal * share).toFixed(2)),
+        bundleGroupId,
+      };
+    });
+    onAddToCart(bundle, proportionalPrices);
+  };
+
+  return (
+    <div className="fbt-bundle-card">
+      {effectiveDiscount > 0 && (
+        <div className="fbt-discount-badge">SAVE {effectiveDiscount}%</div>
+      )}
+
+      <h4 className="fbt-bundle-title">{bundle.title}</h4>
+
+      <div className="fbt-visual-row">
+        {allProducts.map((product, index) => (
+          <React.Fragment key={product.id}>
+            <div className={`fbt-product-thumb ${!checkedIds.has(product.id) ? 'unchecked' : ''}`}>
+              {product.primaryImageUrl
+                ? <img src={product.primaryImageUrl} alt={product.name} />
+                : <div className="fbt-thumb-placeholder">?</div>
+              }
+              <p className="fbt-thumb-name">{product.name}</p>
+            </div>
+            {index < allProducts.length - 1 && (
+              <div className="fbt-plus"><MdAdd size={14} /></div>
+            )}
+          </React.Fragment>
+        ))}
+      </div>
+
+      <div className="fbt-checklist">
+        {allProducts.map(product => {
+          const isChecked = checkedIds.has(product.id);
+          const productDiscounted = calcDiscounted(product.price, product.discountPercent);
+          return (
+            <label key={product.id} className={`fbt-check-row ${!isChecked ? 'unchecked' : ''}`}>
+              <input
+                type="checkbox"
+                checked={isChecked}
+                onChange={() => toggleProduct(product.id)}
+              />
+              <span className="fbt-check-name">{product.name}</span>
+              <span className="fbt-check-prices">
+                {Number(product.price) !== productDiscounted && (
+                  <span className="fbt-check-original">{fmt(product.price)}</span>
+                )}
+                <span className="fbt-check-price">{fmt(productDiscounted)}</span>
+              </span>
+            </label>
+          );
+        })}
+      </div>
+
+      {deselectedCount > 0 && effectiveDiscount > 0 && (
+        <div className="fbt-discount-note">
+          {deselectedCount} item{deselectedCount > 1 ? 's' : ''} removed —
+          discount reduced to {effectiveDiscount}%
+        </div>
+      )}
+
+      {deselectedCount > 0 && effectiveDiscount === 0 && (
+        <div className="fbt-discount-note" style={{ color: 'var(--text-muted)' }}>
+          Select all items to unlock the bundle discount
+        </div>
+      )}
+
+      <div className="fbt-checkout-block">
+        <div className="fbt-price-calc">
+          <span className="fbt-total-label">Selected total</span>
+          <span className="fbt-final-price">{fmt(finalTotal)}</span>
+          {savedAmount > 0.5 && (
+            <span className="fbt-original-price">{fmt(checkedSubtotal)}</span>
+          )}
+        </div>
+        {savedAmount > 0.5 && (
+          <div className="fbt-saving-line">
+            You save {fmt(savedAmount)}
+            {effectiveDiscount > 0 && ` (${effectiveDiscount}% bundle discount)`}
+          </div>
+        )}
+        <button
+          className="btn btn-primary fbt-add-btn"
+          onClick={handleAdd}
+          disabled={addingToCart === bundle.id || checkedCount === 0}
+        >
+          <MdShoppingCart size={16} />
+          {addingToCart === bundle.id
+            ? 'Adding...'
+            : `Add ${checkedCount} Item${checkedCount > 1 ? 's' : ''} to Cart`}
+        </button>
+      </div>
+    </div>
+  );
+};
+
 const FrequentlyBoughtTogether = ({ categoryId, parentCategoryId }) => {
   const [bundles, setBundles] = useState([]);
   const [loading, setLoading] = useState(true);
   const [addingToCart, setAddingToCart] = useState(null);
   const [canScrollLeft, setCanScrollLeft] = useState(false);
   const [canScrollRight, setCanScrollRight] = useState(false);
-  
-  // NEW: State to track selected product IDs per bundle
-  const [selectedProducts, setSelectedProducts] = useState({});
-  
   const scrollRef = useRef(null);
   const { addToCart } = useCart();
   const { isAuthenticated } = useAuth();
@@ -29,19 +173,10 @@ const FrequentlyBoughtTogether = ({ categoryId, parentCategoryId }) => {
     const params = new URLSearchParams();
     params.append('categoryId', categoryId);
     params.append('parentCategoryId', parentCategoryId || categoryId);
-    
     axiosInstance.get(`/api/v1/fbt-sets/for-product?${params.toString()}`)
       .then(res => {
         const data = res.data?.data ?? res.data;
-        const fetchedBundles = Array.isArray(data) ? data : [];
-        setBundles(fetchedBundles);
-
-        // NEW: Initialize all products as checked by default
-        const initialSelection = {};
-        fetchedBundles.forEach(bundle => {
-          initialSelection[bundle.id] = bundle.products.map(p => p.id);
-        });
-        setSelectedProducts(initialSelection);
+        setBundles(Array.isArray(data) ? data : []);
       })
       .catch(err => console.error('Failed to load FBT bundles', err))
       .finally(() => setLoading(false));
@@ -72,48 +207,20 @@ const FrequentlyBoughtTogether = ({ categoryId, parentCategoryId }) => {
     el.scrollBy({ left: dir === 'left' ? -320 : 320, behavior: 'smooth' });
   };
 
-  // NEW: Handle checkbox toggle logic
-  const handleToggleProduct = (bundleId, productId) => {
-    setSelectedProducts(prev => {
-      const currentSelected = prev[bundleId] || [];
-      if (currentSelected.includes(productId)) {
-        // Remove item if unchecking
-        return { ...prev, [bundleId]: currentSelected.filter(id => id !== productId) };
-      } else {
-        // Add item if checking
-        return { ...prev, [bundleId]: [...currentSelected, productId] };
-      }
-    });
-  };
-
-  const handleAddBundleToCart = async (bundle) => {
+  const handleAddToCart = async (bundle, proportionalPrices) => {
     if (!isAuthenticated()) {
       toast.error('Please login to add items to cart');
       navigate('/login');
       return;
     }
-
-    // NEW: Only get products that are currently checked
-    const selectedIds = selectedProducts[bundle.id] || [];
-    const productsToAdd = bundle.products.filter(p => selectedIds.includes(p.id));
-
-    if (productsToAdd.length === 0) {
-      toast.error('Please select at least one item to add to cart.');
-      return;
-    }
-
     setAddingToCart(bundle.id);
     try {
-      for (const product of productsToAdd) {
-        await addToCart(product.id, 1);
+      for (const { id, bundlePrice, bundleGroupId } of proportionalPrices) {
+        await addToCart(id, 1, bundlePrice, bundleGroupId);
       }
-      toast.success(
-        productsToAdd.length === bundle.products.length 
-        ? `${bundle.title} added to cart!` 
-        : `${productsToAdd.length} items added to cart!`
-      );
+      toast.success(`${bundle.title} added to cart!`);
     } catch {
-      toast.error('Failed to add items to cart.');
+      toast.error('Failed to add bundle to cart.');
     } finally {
       setAddingToCart(null);
     }
@@ -144,94 +251,14 @@ const FrequentlyBoughtTogether = ({ categoryId, parentCategoryId }) => {
       </div>
 
       <div className="fbt-scroll-wrapper" ref={scrollRef}>
-        {bundles.map(bundle => {
-          const products = bundle.products || [];
-          
-          // NEW: Dynamic Calculations based on selected items only
-          const selectedIds = selectedProducts[bundle.id] || [];
-          const activeProducts = products.filter(p => selectedIds.includes(p.id));
-          
-          const originalTotal = activeProducts.reduce((sum, p) => sum + Number(p.price || 0), 0);
-          // Assuming the discount applies to whatever is selected. If it requires all items to be selected, 
-          // you could wrap this in a check: `selectedIds.length === products.length ? ... : 0`
-          const discountAmount = originalTotal * (Number(bundle.discountPercent || 0) / 100);
-          const finalTotal = originalTotal - discountAmount;
-
-          return (
-            <div key={bundle.id} className="fbt-bundle-card">
-              {bundle.discountPercent > 0 && selectedIds.length > 0 && (
-                <div className="fbt-discount-badge">Save {bundle.discountPercent}%</div>
-              )}
-
-              <h4 className="fbt-bundle-title">{bundle.title}</h4>
-
-              {/* Keep the visual row for aesthetics, optionally fade out unselected ones */}
-              <div className="fbt-visual-row">
-                {products.map((product, index) => (
-                  <React.Fragment key={product.id}>
-                    <div 
-                      className="fbt-product-thumb" 
-                      style={{ opacity: selectedIds.includes(product.id) ? 1 : 0.4 }}
-                    >
-                      {product.primaryImageUrl
-                        ? <img src={product.primaryImageUrl} alt={product.name} />
-                        : <div className="fbt-thumb-placeholder">?</div>
-                      }
-                      <p className="fbt-thumb-name">{product.name}</p>
-                    </div>
-                    {index < products.length - 1 && (
-                      <div className="fbt-plus"><MdAdd size={16} /></div>
-                    )}
-                  </React.Fragment>
-                ))}
-              </div>
-
-              {/* NEW: Checkbox List Implementation */}
-              <ul className="fbt-item-list">
-                {products.map(product => (
-                  <li key={product.id} className="fbt-list-item">
-                    <label className="fbt-checkbox-label" style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' }}>
-                      <input
-                        type="checkbox"
-                        checked={selectedIds.includes(product.id)}
-                        onChange={() => handleToggleProduct(bundle.id, product.id)}
-                        style={{ cursor: 'pointer', width: '16px', height: '16px' }}
-                      />
-                      <span className="fbt-item-name" style={{ textDecoration: selectedIds.includes(product.id) ? 'none' : 'line-through', opacity: selectedIds.includes(product.id) ? 1 : 0.6 }}>
-                        {product.name}
-                      </span>
-                    </label>
-                    <span className="fbt-item-price" style={{ opacity: selectedIds.includes(product.id) ? 1 : 0.6 }}>
-                      ₹{Number(product.price).toLocaleString('en-IN')}
-                    </span>
-                  </li>
-                ))}
-              </ul>
-
-              <div className="fbt-checkout-block">
-                <div className="fbt-price-calc">
-                  <span className="fbt-total-label">Selected total</span>
-                  <span className="fbt-final-price">
-                    ₹{finalTotal.toLocaleString('en-IN')}
-                  </span>
-                  {bundle.discountPercent > 0 && originalTotal > 0 && (
-                    <span className="fbt-original-price">
-                      ₹{originalTotal.toLocaleString('en-IN')}
-                    </span>
-                  )}
-                </div>
-                <button
-                  className="btn btn-primary fbt-add-btn"
-                  onClick={() => handleAddBundleToCart(bundle)}
-                  disabled={addingToCart === bundle.id || selectedIds.length === 0}
-                >
-                  <MdShoppingCart size={16} />
-                  {addingToCart === bundle.id ? 'Adding...' : 'Add Selected to Cart'}
-                </button>
-              </div>
-            </div>
-          );
-        })}
+        {bundles.map(bundle => (
+          <BundleCard
+            key={bundle.id}
+            bundle={bundle}
+            onAddToCart={handleAddToCart}
+            addingToCart={addingToCart}
+          />
+        ))}
       </div>
     </div>
   );

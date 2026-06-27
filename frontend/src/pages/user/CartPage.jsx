@@ -9,7 +9,7 @@ import { MdShoppingCart, MdImage, MdClose, MdLocalShipping, MdCheckCircle } from
 import './CartPage.css';
 
 const CartPage = () => {
-  const { cart, loading, updateItem, removeItem, clearCart } = useCart();
+  const { cart, loading, updateItem, removeItem, removeBundleGroup, clearCart } = useCart();
   const navigate = useNavigate();
   const [shippingConfig, setShippingConfig] = useState(null);
 
@@ -47,6 +47,15 @@ const CartPage = () => {
     }
   };
 
+  const handleRemoveBundle = async (bundleGroupId) => {
+    try {
+      await removeBundleGroup(bundleGroupId);
+      toast.success('Bundle removed');
+    } catch {
+      toast.error('Failed to remove bundle');
+    }
+  };
+
   const handleClear = async () => {
     if (!window.confirm('Clear entire cart?')) return;
     try {
@@ -61,20 +70,44 @@ const CartPage = () => {
 
   const items = cart?.items || [];
   const subtotal = cart?.subtotal || 0;
-  const totalWeightGrams = items.reduce((sum, item) => sum + (item.weightGrams || 0) * item.quantity, 0);
+  const totalWeightGrams = items.reduce(
+    (sum, item) => sum + (item.weightGrams || 0) * item.quantity, 0
+  );
   const deliveryCharge = shippingConfig
     ? calculateDeliveryCharge(totalWeightGrams, shippingConfig.deliverySlabs)
     : 0;
   const total = Number(subtotal) + deliveryCharge;
 
+  // Group items — bundle items grouped by bundleGroupId, singles standalone
+  const groupedItems = [];
+  const bundleMap = new Map();
+
+  items.forEach(item => {
+    if (item.bundleGroupId) {
+      if (!bundleMap.has(item.bundleGroupId)) {
+        bundleMap.set(item.bundleGroupId, []);
+        groupedItems.push({ type: 'bundle', bundleGroupId: item.bundleGroupId, items: bundleMap.get(item.bundleGroupId) });
+      }
+      bundleMap.get(item.bundleGroupId).push(item);
+    } else {
+      groupedItems.push({ type: 'single', item });
+    }
+  });
+
   return (
     <div className="page-wrapper">
       <div className="container cart-page">
-        <h1 className="cart-title">My Cart {items.length > 0 && <span className="text-muted">({cart.totalQuantity} items)</span>}</h1>
+        <h1 className="cart-title">
+          My Cart{items.length > 0 && (
+            <span className="text-muted">({cart.totalQuantity} items)</span>
+          )}
+        </h1>
 
         {items.length === 0 ? (
           <div className="empty-state">
-            <div className="empty-state-icon"><MdShoppingCart size={64} color="var(--text-muted)" /></div>
+            <div className="empty-state-icon">
+              <MdShoppingCart size={64} color="var(--text-muted)" />
+            </div>
             <p className="empty-state-title">Your cart is empty</p>
             <p className="empty-state-desc">Add some amazing anime products!</p>
             <Link to="/products" className="btn btn-primary" style={{ marginTop: '1rem' }}>
@@ -83,53 +116,127 @@ const CartPage = () => {
           </div>
         ) : (
           <div className="cart-layout">
-            {/* Items */}
+
+            {/* ── Items ── */}
             <div className="cart-items">
               <div className="cart-items-header">
                 <span>Product</span>
                 <button className="btn btn-ghost btn-sm" onClick={handleClear}>Clear All</button>
               </div>
 
-              {items.map(item => (
-                <div key={item.cartItemId} className="cart-item">
-                  <div className="cart-item-image">
-                    {item.primaryImageUrl
-                      ? <img src={item.primaryImageUrl} alt={item.productName} />
-                      : <span><MdImage size={28} color="var(--text-muted)" /></span>}
-                  </div>
-
-                  <div className="cart-item-info">
-                    <Link to={`/products/${item.productSlug}`} className="cart-item-name">
-                      {item.productName}
-                    </Link>
-                    <div className="cart-item-price">
-                      ₹{Number(item.discountedPrice).toLocaleString('en-IN')} each
+              {groupedItems.map((group, idx) => {
+                if (group.type === 'single') {
+                  const item = group.item;
+                  const effectivePrice = item.effectivePrice ?? item.discountedPrice;
+                  return (
+                    <div key={item.cartItemId} className="cart-item">
+                      <div className="cart-item-image">
+                        {item.primaryImageUrl
+                          ? <img src={item.primaryImageUrl} alt={item.productName} />
+                          : <span><MdImage size={28} color="var(--text-muted)" /></span>
+                        }
+                      </div>
+                      <div className="cart-item-info">
+                        <Link to={`/products/${item.productSlug}`} className="cart-item-name">
+                          {item.productName}
+                        </Link>
+                        <div className="cart-item-price">
+                          ₹{Number(effectivePrice).toLocaleString('en-IN')} each
+                        </div>
+                        {!item.isAvailable && (
+                          <span className="badge badge-red" style={{ marginTop: 4 }}>
+                            No longer available
+                          </span>
+                        )}
+                      </div>
+                      <div className="quantity-selector">
+                        <button className="qty-btn"
+                          onClick={() => handleQtyChange(item.cartItemId, item.quantity - 1)}>−</button>
+                        <span className="qty-value">{item.quantity}</span>
+                        <button className="qty-btn"
+                          onClick={() => handleQtyChange(item.cartItemId, item.quantity + 1)}
+                          disabled={item.quantity >= item.availableStock}>+</button>
+                      </div>
+                      <div className="cart-item-total">
+                        ₹{Number(item.totalPrice).toLocaleString('en-IN')}
+                      </div>
+                      <button className="cart-item-remove"
+                        onClick={() => handleRemove(item.cartItemId)}>
+                        <MdClose size={16} />
+                      </button>
                     </div>
-                    {!item.isAvailable && (
-                      <span className="badge badge-red">No longer available</span>
-                    )}
-                  </div>
+                  );
+                }
 
-                  <div className="quantity-selector">
-                    <button className="qty-btn" onClick={() => handleQtyChange(item.cartItemId, item.quantity - 1)}>−</button>
-                    <span className="qty-value">{item.quantity}</span>
-                    <button
-                      className="qty-btn"
-                      onClick={() => handleQtyChange(item.cartItemId, item.quantity + 1)}
-                      disabled={item.quantity >= item.availableStock}
-                    >+</button>
-                  </div>
+                // Bundle group
+                const bundleTotal = group.items.reduce(
+                  (sum, i) => sum + Number(i.totalPrice || 0), 0
+                );
+                const bundleOriginal = group.items.reduce(
+                  (sum, i) => sum + Number(i.discountedPrice || 0) * i.quantity, 0
+                );
+                const saved = bundleOriginal - bundleTotal;
 
-                  <div className="cart-item-total">
-                    ₹{Number(item.totalPrice).toLocaleString('en-IN')}
+                return (
+                  <div key={group.bundleGroupId} className="cart-bundle-group">
+                    <div className="cart-bundle-header">
+                      <span className="cart-bundle-label">Bundle</span>
+                      {saved > 0.5 && (
+                        <span className="cart-bundle-saving">
+                          You save ₹{saved.toLocaleString('en-IN', { maximumFractionDigits: 2 })}
+                        </span>
+                      )}
+                      <button className="cart-bundle-remove"
+                        onClick={() => handleRemoveBundle(group.bundleGroupId)}>
+                        <MdClose size={14} /> Remove Bundle
+                      </button>
+                    </div>
+                    {group.items.map(item => {
+                      const effectivePrice = item.effectivePrice ?? item.discountedPrice;
+                      return (
+                        <div key={item.cartItemId} className="cart-item cart-bundle-item">
+                          <div className="cart-item-image">
+                            {item.primaryImageUrl
+                              ? <img src={item.primaryImageUrl} alt={item.productName} />
+                              : <span><MdImage size={28} color="var(--text-muted)" /></span>
+                            }
+                          </div>
+                          <div className="cart-item-info">
+                            <Link to={`/products/${item.productSlug}`} className="cart-item-name">
+                              {item.productName}
+                            </Link>
+                            <div className="cart-item-price">
+                              ₹{Number(effectivePrice).toLocaleString('en-IN')} each
+                              <span className="bundle-price-tag">Bundle price</span>
+                            </div>
+                            <div className="cart-item-original-price">
+                              Original: ₹{Number(item.discountedPrice).toLocaleString('en-IN')}
+                            </div>
+                          </div>
+                          <div className="quantity-selector">
+                            <span className="qty-value" style={{ minWidth: 32, textAlign: 'center' }}>
+                              {item.quantity}
+                            </span>
+                          </div>
+                          <div className="cart-item-total">
+                            ₹{Number(item.totalPrice).toLocaleString('en-IN')}
+                          </div>
+                          <div style={{ width: 28 }} />
+                        </div>
+                      );
+                    })}
+                    <div className="cart-bundle-total-row">
+                      <span>Bundle total</span>
+                      <span className="text-gold">
+                        ₹{bundleTotal.toLocaleString('en-IN', { maximumFractionDigits: 2 })}
+                      </span>
+                    </div>
                   </div>
-
-                  <button className="cart-item-remove" onClick={() => handleRemove(item.cartItemId)}><MdClose size={16} /></button>
-                </div>
-              ))}
+                );
+              })}
             </div>
 
-            {/* Summary */}
+            {/* ── Summary ── */}
             <div className="cart-summary">
               <h3>Order Summary</h3>
               <div className="summary-row">
@@ -141,13 +248,17 @@ const CartPage = () => {
                   <MdLocalShipping size={15} /> Delivery
                   {totalWeightGrams > 0 && (
                     <span className="text-muted" style={{ fontSize: '0.72rem', fontWeight: 'normal' }}>
-                      ({totalWeightGrams >= 1000 ? `${(totalWeightGrams / 1000).toFixed(2)} kg` : `${totalWeightGrams}g`})
+                      ({totalWeightGrams >= 1000
+                        ? `${(totalWeightGrams / 1000).toFixed(2)} kg`
+                        : `${totalWeightGrams}g`})
                     </span>
                   )}
                 </span>
                 <span>
                   {deliveryCharge === 0
-                    ? <span className="text-success" style={{ display: 'flex', alignItems: 'center', gap: 4 }}><MdCheckCircle size={14} /> Free</span>
+                    ? <span className="text-success" style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                        <MdCheckCircle size={14} /> Free
+                      </span>
                     : `₹${deliveryCharge.toLocaleString('en-IN')}`
                   }
                 </span>
@@ -157,10 +268,8 @@ const CartPage = () => {
                 <span>Total</span>
                 <span className="text-gold">₹{total.toLocaleString('en-IN')}</span>
               </div>
-              <button
-                className="btn btn-primary btn-full btn-lg"
-                onClick={() => navigate('/checkout')}
-              >
+              <button className="btn btn-primary btn-full btn-lg"
+                onClick={() => navigate('/checkout')}>
                 Proceed to Checkout →
               </button>
               <Link to="/products" className="btn btn-ghost btn-full">

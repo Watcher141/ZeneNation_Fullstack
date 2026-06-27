@@ -4,19 +4,9 @@ import jakarta.persistence.*;
 import lombok.*;
 import org.hibernate.annotations.UpdateTimestamp;
 
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
-/**
- * A single line item inside a Cart.
- *
- * Each CartItem = one product + quantity.
- * If user adds the same product twice, quantity is incremented
- * (handled in service layer) — not two separate CartItem rows.
- *
- * Price is NOT stored here.
- * Current price is always fetched from Product at cart view time.
- * This ensures the cart always shows up-to-date prices.
- */
 @Entity
 @Table(
     name = "cart_items",
@@ -24,7 +14,6 @@ import java.time.LocalDateTime;
         @Index(name = "idx_cart_items_cart_id", columnList = "cart_id"),
         @Index(name = "idx_cart_items_product_id", columnList = "product_id")
     },
-    // Prevent duplicate product entries in the same cart at DB level
     uniqueConstraints = {
         @UniqueConstraint(
             name = "uk_cart_items_cart_product",
@@ -43,10 +32,6 @@ public class CartItem {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    // ------------------------------------------------------------------
-    // RELATIONSHIPS
-    // ------------------------------------------------------------------
-
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "cart_id", nullable = false)
     private Cart cart;
@@ -55,22 +40,15 @@ public class CartItem {
     @JoinColumn(name = "product_id", nullable = false)
     private Product product;
 
-    // ------------------------------------------------------------------
-    // QUANTITY
-    // ------------------------------------------------------------------
-
-    /**
-     * How many units of this product are in the cart.
-     * Minimum 1. Max enforced in service layer (e.g. max 10 per item).
-     * Also validated against product stockQuantity at checkout.
-     */
     @Column(nullable = false)
     @Builder.Default
     private Integer quantity = 1;
 
-    // ------------------------------------------------------------------
-    // AUDIT
-    // ------------------------------------------------------------------
+    @Column(name = "bundle_price", precision = 10, scale = 2)
+    private BigDecimal bundlePrice;
+
+    @Column(name = "bundle_group_id", length = 36)
+    private String bundleGroupId;
 
     @UpdateTimestamp
     @Column(name = "updated_at")

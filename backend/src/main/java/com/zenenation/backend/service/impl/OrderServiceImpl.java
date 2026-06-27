@@ -83,10 +83,7 @@ public class OrderServiceImpl implements OrderService {
         Cart cart = cartRepository.findByUserId(user.getId())
                 .orElseThrow(() -> new ResourceNotFoundException("Cart not found"));
 
-        List<CartItem> cartItems = cartItemRepository
-                .findAll().stream()
-                .filter(item -> item.getCart().getId().equals(cart.getId()))
-                .collect(Collectors.toList());
+        List<CartItem> cartItems = cartItemRepository.findByCartId(cart.getId());
 
         if (cartItems.isEmpty()) {
             throw new BadRequestException("Your cart is empty. Add items before placing an order.");
@@ -116,8 +113,11 @@ public class OrderServiceImpl implements OrderService {
             BigDecimal discountedPrice = PriceUtil.calculateDiscountedPrice(
                     product.getPrice(), product.getDiscountPercent()
             );
+            BigDecimal effectivePrice = item.getBundlePrice() != null
+                    ? item.getBundlePrice()
+                    : discountedPrice;
             subtotal = subtotal.add(
-                    PriceUtil.calculateLineTotal(discountedPrice, item.getQuantity())
+                    PriceUtil.calculateLineTotal(effectivePrice, item.getQuantity())
             );
         }
 
@@ -215,8 +215,11 @@ public class OrderServiceImpl implements OrderService {
             BigDecimal discountedPrice = PriceUtil.calculateDiscountedPrice(
                     product.getPrice(), product.getDiscountPercent()
             );
+            BigDecimal effectivePrice = cartItem.getBundlePrice() != null
+                    ? cartItem.getBundlePrice()
+                    : discountedPrice;
             BigDecimal lineTotal = PriceUtil.calculateLineTotal(
-                    discountedPrice, cartItem.getQuantity()
+                    effectivePrice, cartItem.getQuantity()
             );
 
             String imageUrl = productImageRepository
@@ -229,11 +232,10 @@ public class OrderServiceImpl implements OrderService {
                     .product(product)
                     .productName(product.getName())
                     .productImageUrl(imageUrl)
-                    .priceAtPurchase(discountedPrice)
+                    .priceAtPurchase(effectivePrice)
                     .quantity(cartItem.getQuantity())
                     .totalPrice(lineTotal)
                     .build();
-
             orderItems.add(orderItemRepository.save(orderItem));
 
             product.setStockQuantity(product.getStockQuantity() - cartItem.getQuantity());

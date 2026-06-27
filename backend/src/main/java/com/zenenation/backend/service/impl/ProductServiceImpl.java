@@ -467,7 +467,7 @@ public class ProductServiceImpl implements ProductService {
                 .stockQuantity(product.getStockQuantity())
                 .weightGrams(product.getWeightGrams())
                 .isActive(product.getIsActive())
-                .primaryImageUrl(imageMap.get(product.getId())) // <── THE MAGIC SPEED UP
+                .primaryImageUrl(imageMap.get(product.getId())) 
                 .category(CategoryResponse.builder()
                         .id(product.getCategory().getId())
                         .name(product.getCategory().getName())
@@ -537,6 +537,9 @@ public class ProductServiceImpl implements ProductService {
                         .id(product.getCategory().getId())
                         .name(product.getCategory().getName())
                         .imageUrl(product.getCategory().getImageUrl())
+                        .parentId(product.getCategory().getParent() != null
+                        ? product.getCategory().getParent().getId()
+                        : null)
                         .build())
                 .createdAt(product.getCreatedAt())
                 .updatedAt(product.getUpdatedAt())

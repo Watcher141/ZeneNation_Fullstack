@@ -26,4 +26,6 @@ public interface CartService {
 
     /** Remove all items from cart */
     CartResponse clearCart();
+
+    CartResponse removeBundleGroup(String bundleGroupId);
 }
