@@ -38,7 +38,7 @@ const CheckoutPage = () => {
   const [useRewards, setUseRewards] = useState(false);
   const [preorderPaymentType, setPreorderPaymentType] = useState('FULL');
   const [shippingConfig, setShippingConfig] = useState(null);
-  
+
   // ── NEW: State to trigger the success animation ──
   const [orderSuccess, setOrderSuccess] = useState(false);
 
@@ -174,12 +174,12 @@ const CheckoutPage = () => {
         openRazorpay(order);
       } else {
         await fetchCart();
-        
+
         // ── NEW: Trigger success animation instead of immediate redirect ──
         setOrderSuccess(true);
         setTimeout(() => {
           navigate('/orders');
-        }, 3000); 
+        }, 3000);
       }
     } catch (err) {
       toast.error(err.response?.data?.message || 'Failed to place order');
@@ -204,13 +204,13 @@ const CheckoutPage = () => {
             razorpaySignature: response.razorpay_signature,
           });
           await fetchCart();
-          
+
           // ── NEW: Trigger success animation for online payment ──
           setOrderSuccess(true);
           setTimeout(() => {
             navigate('/orders');
           }, 4500);
-          
+
         } catch {
           toast.error('Payment verification failed. Contact support.');
           navigate('/orders');
@@ -221,7 +221,22 @@ const CheckoutPage = () => {
         contact: addresses.find(a => a.id === selectedAddress)?.phoneNumber || '',
       },
       theme: { color: '#e94560' },
-      modal: { ondismiss: () => { toast.error('Payment cancelled.'); navigate('/orders'); } }
+      // FIX: previously ondismiss only showed a toast and redirected, leaving the
+      // backend order (created before checkout opened) in place even though the
+      // user never paid. Now we call the cancel endpoint on dismiss so the order
+      // doesn't remain as a "placed" order when payment was never completed.
+      modal: {
+        ondismiss: async () => {
+          try {
+            const api = await import('../../api/axiosInstance');
+            await api.default.patch(`/api/v1/orders/${order.id}/cancel`);
+          } catch (err) {
+            console.error('Failed to cancel order on payment dismiss', err);
+          }
+          toast.error('Payment cancelled.');
+          navigate('/orders');
+        }
+      }
     };
     const script = document.createElement('script');
     script.src = 'https://checkout.razorpay.com/v1/checkout.js';
@@ -238,8 +253,8 @@ const CheckoutPage = () => {
         {/* Falling Stars */}
         <div className="falling-stars">
           {[...Array(20)].map((_, i) => (
-            <div key={i} className="star" style={{ 
-              left: `${Math.random() * 100}%`, 
+            <div key={i} className="star" style={{
+              left: `${Math.random() * 100}%`,
               animationDelay: `${Math.random() * 2}s`,
               animationDuration: `${1 + Math.random() * 2}s`
             }}>★</div>
@@ -352,17 +367,17 @@ const CheckoutPage = () => {
                 <MdPayment size={20} color="var(--accent-primary)" /> Payment Method
               </h2>
               <div className="payment-options">
-                <label 
+                <label
                   className={`payment-option ${paymentMethod === 'COD' ? 'selected' : ''}`}
-                  style={{ 
-                    opacity: hasPreorderItems ? 0.5 : 1, 
-                    cursor: hasPreorderItems ? 'not-allowed' : 'pointer' 
+                  style={{
+                    opacity: hasPreorderItems ? 0.5 : 1,
+                    cursor: hasPreorderItems ? 'not-allowed' : 'pointer'
                   }}
                 >
                   <input type="radio" name="payment" value="COD"
                     disabled={hasPreorderItems}
-                    checked={paymentMethod === 'COD'} 
-                    onChange={() => setPaymentMethod('COD')} 
+                    checked={paymentMethod === 'COD'}
+                    onChange={() => setPaymentMethod('COD')}
                   />
                   <BsCash size={24} color="var(--accent-secondary)" />
                   <div>
@@ -441,10 +456,10 @@ const CheckoutPage = () => {
               </h2>
 
               {/* ── NEW ESTIMATED DELIVERY BOX ── */}
-              <div style={{ 
-                background: 'var(--bg-secondary)', 
-                padding: 'var(--space-3)', 
-                borderRadius: 'var(--border-radius-md)', 
+              <div style={{
+                background: 'var(--bg-secondary)',
+                padding: 'var(--space-3)',
+                borderRadius: 'var(--border-radius-md)',
                 marginBottom: 'var(--space-4)',
                 display: 'flex',
                 alignItems: 'center',
@@ -455,8 +470,8 @@ const CheckoutPage = () => {
                 <div>
                   <div style={{ fontSize: 'var(--text-sm)', fontWeight: 600 }}>Estimated Delivery</div>
                   <div style={{ fontSize: 'var(--text-xs)', color: 'var(--text-muted)', marginTop: '2px' }}>
-                    {hasPreorderItems 
-                      ? '14-20 Days (Includes pre-order processing)' 
+                    {hasPreorderItems
+                      ? '14-20 Days (Includes pre-order processing)'
                       : '5-10 Days (Standard Shipping)'}
                   </div>
                 </div>
