@@ -54,6 +54,40 @@
   font-weight: var(--font-semibold);
 }
 
+/* ── UPDATED: New Arrivals — text stays solid/readable at all times;
+   a glow highlight sweeps left→right behind it using an animated
+   horizontal text-shadow offset (avoids background-clip:text, which
+   made the text invisible in some renders). ── */
+.sidebar-new-arrivals {
+  position: relative;
+  font-weight: var(--font-semibold);
+  color: var(--accent-primary);
+  margin-bottom: var(--space-2);
+  animation: neonSweep 2.5s linear infinite;
+}
+
+.sidebar-new-arrivals.active {
+  color: #fff;
+}
+
+@keyframes neonSweep {
+  0% {
+    text-shadow:
+      -14px 0 10px var(--accent-primary),
+      0 0 4px var(--accent-primary);
+  }
+  50% {
+    text-shadow:
+      14px 0 10px var(--accent-primary),
+      0 0 8px var(--accent-primary);
+  }
+  100% {
+    text-shadow:
+      -14px 0 10px var(--accent-primary),
+      0 0 4px var(--accent-primary);
+  }
+}
+
 .products-toolbar {
   display: flex;
   justify-content: space-between;

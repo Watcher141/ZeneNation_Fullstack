@@ -155,8 +155,8 @@ const HomePage = () => {
                 <Link to="/products" className="btn btn-primary" style={{ padding: '8px 18px', fontSize: '0.85rem' }}>
                   Explore Collection
                 </Link>
-                <Link to="/categories" className="btn btn-ghost" style={{ padding: '8px 18px', fontSize: '0.85rem', border: '1px solid rgba(255,255,255,0.3)', color: '#fff', background: 'rgba(255,255,255,0.05)' }}>
-                  View Categories
+                <Link to="/products?newArrivals=true&page=0" className="btn btn-ghost" style={{ padding: '8px 18px', fontSize: '0.85rem', border: '1px solid rgba(255,255,255,0.3)', color: '#fff', background: 'rgba(255,255,255,0.05)' }}>
+                  New Arrivals
                 </Link>
               </div>
             </div>

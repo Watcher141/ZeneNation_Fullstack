@@ -32,19 +32,28 @@ const ProductsPage = () => {
   const sortDir = searchParams.get('sortDir') || 'desc';
   const categoryId = searchParams.get('categoryId');
 
+  // NEW: "New Arrivals" is its own mode, tracked via a query param so it's
+  // shareable/bookmarkable and survives page refresh, just like category filters.
+  const isNewArrivals = searchParams.get('newArrivals') === 'true';
+
   useEffect(() => {
     categoryApi.getAll().then(r => setCategories(r.data.data || [])).catch(() => {});
   }, []);
 
   useEffect(() => {
     fetchProducts();
-  }, [page, sortBy, sortDir, categoryId]);
+    // NEW: re-fetch whenever New Arrivals mode toggles on/off
+  }, [page, sortBy, sortDir, categoryId, isNewArrivals]);
 
   const fetchProducts = async () => {
     setLoading(true);
     try {
       let res;
-      if (categoryId) {
+      if (isNewArrivals) {
+        // NEW: New Arrivals mode hits the dedicated newest-first endpoint,
+        // bypassing category/sort filters entirely.
+        res = await productApi.getNewArrivals({ page, size: 12 });
+      } else if (categoryId) {
         res = await productApi.getByCategory(categoryId, { page, size: 12 });
       } else {
         res = await productApi.getAll({ page, size: 12, sortBy, sortDir });
@@ -62,7 +71,8 @@ const ProductsPage = () => {
     const p = new URLSearchParams(searchParams);
     if (catId) p.set('categoryId', catId);
     else p.delete('categoryId');
-    p.set('page', '0'); 
+    p.delete('newArrivals'); // NEW: picking a category exits New Arrivals mode
+    p.set('page', '0');
     setSearchParams(p);
   };
 
@@ -70,7 +80,17 @@ const ProductsPage = () => {
     const p = new URLSearchParams(searchParams);
     p.set('sortBy', sb);
     p.set('sortDir', sd);
-    p.set('page', '0'); 
+    p.delete('newArrivals'); // NEW: manual sorting exits New Arrivals mode
+    p.set('page', '0');
+    setSearchParams(p);
+  };
+
+  // NEW: switch into New Arrivals mode, clearing category filter
+  const setNewArrivals = () => {
+    const p = new URLSearchParams(searchParams);
+    p.set('newArrivals', 'true');
+    p.delete('categoryId');
+    p.set('page', '0');
     setSearchParams(p);
   };
 
@@ -86,8 +106,17 @@ const ProductsPage = () => {
         {/* ── Sidebar ── */}
         <aside className="products-sidebar">
           <h3 className="sidebar-title">Categories</h3>
+
+          {/* NEW: New Arrivals — visually distinct entry point, glow styled via CSS */}
           <button
-            className={`sidebar-cat-item ${!categoryId ? 'active' : ''}`}
+            className={`sidebar-cat-item sidebar-new-arrivals ${isNewArrivals ? 'active' : ''}`}
+            onClick={setNewArrivals}
+          >
+             New Arrivals
+          </button>
+
+          <button
+            className={`sidebar-cat-item ${!categoryId && !isNewArrivals ? 'active' : ''}`}
             onClick={() => setCategory(null)}
           >
             All Products
@@ -95,7 +124,7 @@ const ProductsPage = () => {
           {categories.map(cat => (
             <div key={cat.id}>
               <button
-                className={`sidebar-cat-item ${categoryId == cat.id ? 'active' : ''}`}
+                className={`sidebar-cat-item ${!isNewArrivals && categoryId == cat.id ? 'active' : ''}`}
                 onClick={() => setCategory(cat.id)}
               >
                 {cat.name}
@@ -125,22 +154,27 @@ const ProductsPage = () => {
         <main className="products-main">
           <div className="products-toolbar">
             <p className="products-count">
-              {pagination.totalElements || 0} products
+              {/* NEW: label changes in New Arrivals mode */}
+              {isNewArrivals ? 'New Arrivals — ' : ''}{pagination.totalElements || 0} products
             </p>
-            <select
-              className="form-select products-sort"
-              value={`${sortBy}-${sortDir}`}
-              onChange={(e) => {
-                const [sb, sd] = e.target.value.split('-');
-                setSort(sb, sd);
-              }}
-            >
-              <option value="createdAt-desc">Newest First</option>
-              <option value="createdAt-asc">Oldest First</option>
-              <option value="price-asc">Price: Low to High</option>
-              <option value="price-desc">Price: High to Low</option>
-              <option value="name-asc">Name: A to Z</option>
-            </select>
+
+            {/* NEW: sort dropdown is hidden in New Arrivals mode since it's always newest-first */}
+            {!isNewArrivals && (
+              <select
+                className="form-select products-sort"
+                value={`${sortBy}-${sortDir}`}
+                onChange={(e) => {
+                  const [sb, sd] = e.target.value.split('-');
+                  setSort(sb, sd);
+                }}
+              >
+                <option value="createdAt-desc">Newest First</option>
+                <option value="createdAt-asc">Oldest First</option>
+                <option value="price-asc">Price: Low to High</option>
+                <option value="price-desc">Price: High to Low</option>
+                <option value="name-asc">Name: A to Z</option>
+              </select>
+            )}
           </div>
 
           {/* ── Conditional Rendering for Skeleton Loader ── */}

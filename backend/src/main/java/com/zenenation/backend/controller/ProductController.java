@@ -107,11 +107,11 @@ public class ProductController {
      * GET /api/v1/products/admin/all
      * All products including hidden ones. Admin only.
      */
-   @GetMapping("/admin/all")
-@PreAuthorize("hasRole('ADMIN')")
-@SecurityRequirement(name = "bearerAuth")
-@Operation(summary = "Admin: get all products including hidden")
-public ResponseEntity<ApiResponse<PagedResponse<ProductSummaryResponse>>> getAllForAdmin(
+    @GetMapping("/admin/all")
+    @PreAuthorize("hasRole('ADMIN')")
+    @SecurityRequirement(name = "bearerAuth")
+    @Operation(summary = "Admin: get all products including hidden")
+    public ResponseEntity<ApiResponse<PagedResponse<ProductSummaryResponse>>> getAllForAdmin(
         @RequestParam(defaultValue = "0")  int page,
         @RequestParam(defaultValue = "20") int size,
         @RequestParam(required = false)    String search) {  // ← added
@@ -283,5 +283,22 @@ public ResponseEntity<ApiResponse<PagedResponse<ProductSummaryResponse>>> getAll
                 .toList();
         return ResponseEntity.ok(ApiResponse.success("Preorder products fetched", products));
     }
+
+    /**
+        * GET /api/v1/products/newproducts
+       * Newest products first — same data as GET /api/v1/products,
+        * just with sort locked to createdAt DESC so the frontend doesn't
+        * need to pass sortBy/sortDir for the "New Arrivals" section.
+        * Modified on 16-7-2026
+        */
+        @GetMapping("/newproducts")
+        @Operation(summary = "Get newest products first (paginated, for New Arrivals section)")
+        public ResponseEntity<ApiResponse<PagedResponse<ProductSummaryResponse>>> getNewProducts(
+                @RequestParam(defaultValue = "0")  int page,
+                @RequestParam(defaultValue = "12") int size) {
+
+                return ResponseEntity.ok(ApiResponse.success("New arrivals fetched",
+                productService.getAllProducts(page, size, "createdAt", "desc")));
+        }
 
 }

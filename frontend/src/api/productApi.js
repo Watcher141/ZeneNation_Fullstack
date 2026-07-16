@@ -4,6 +4,9 @@ import api from './axiosInstance';
 export const productApi = {
   getPreorders: ()      => api.get('/api/v1/products/preorder'),
   getAll: (params) => api.get('/api/v1/products', { params }),
+  // NEW: New Arrivals — dedicated newest-first endpoint, used by the
+  // "New Arrivals" sidebar option on ProductsPage.
+  getNewArrivals: (params) => api.get('/api/v1/products/newproducts', { params }),
   getById: (id) => api.get(`/api/v1/products/${id}`),
   getBySlug: (slug) => api.get(`/api/v1/products/slug/${slug}`),
   getByCategory: (categoryId, params) => api.get(`/api/v1/products/category/${categoryId}`, { params }),
