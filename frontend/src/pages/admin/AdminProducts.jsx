@@ -6,7 +6,7 @@ import Loader from '../../components/common/Loader';
 import { productApi } from '../../api/productApi';
 import { categoryApi } from '../../api/categoryApi';
 import toast from 'react-hot-toast';
-import { MdImage, MdRocketLaunch, MdPhotoLibrary, MdClose, MdSearch } from 'react-icons/md';
+import { MdImage, MdRocketLaunch, MdPhotoLibrary, MdClose } from 'react-icons/md';
 
 const emptyForm = {
   name: '', description: '', tagline: '', price: '', discountPercent: '0',
@@ -19,7 +19,7 @@ const AdminProducts = () => {
   const [categories, setCategories] = useState([]);
   const [subcategories, setSubcategories] = useState([]);
   const [pagination, setPagination] = useState({});
-  const [loading, setLoading] = useState(false); // Changed initial state to false
+  const [loading, setLoading] = useState(false);
   const [showModal, setShowModal] = useState(false);
   const [editing, setEditing] = useState(null);
   const [form, setForm] = useState(emptyForm);
@@ -30,29 +30,48 @@ const AdminProducts = () => {
   const [filterCategory, setFilterCategory] = useState('');
   const [filterStatus, setFilterStatus] = useState('');
   const [filterSearch, setFilterSearch] = useState('');
+  const [debouncedSearch, setDebouncedSearch] = useState('');
 
-  // 1. Set up the Intersection Observer for Infinite Scroll
+  // Debounce search input
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearch(filterSearch);
+    }, 500);
+    return () => clearTimeout(timer);
+  }, [filterSearch]);
+
+  // Reset back to page 0 whenever filters change
+  useEffect(() => {
+    setPage(0);
+  }, [debouncedSearch, filterStatus, filterCategory]);
+
+  // Setup Intersection Observer for Infinite Scroll
   const observer = useRef();
   const lastProductElementRef = useCallback(node => {
     if (loading) return;
     if (observer.current) observer.current.disconnect();
     
     observer.current = new IntersectionObserver(entries => {
-      // If we hit the bottom of the list and there are more pages, fetch the next one
       if (entries[0].isIntersecting && page < (pagination.totalPages - 1)) {
-        setPage(prevPage => prevPage + 1);
+        setPage(prev => prev + 1);
       }
     });
     
     if (node) observer.current.observe(node);
   }, [loading, pagination.totalPages, page]);
 
-  // 2. Modify fetch to APPEND data instead of replacing it (unless we are on page 0)
+  // Fetch Products
   const fetchProducts = useCallback(async (resetPage = false) => {
     const targetPage = resetPage ? 0 : page;
     setLoading(true);
     try {
-      const res = await productApi.getAllAdmin({ page: targetPage, size: 10 });
+      const params = { page: targetPage, size: 10 };
+      
+      if (debouncedSearch) params.search = debouncedSearch;
+      if (filterStatus) params.status = filterStatus;
+      if (filterCategory) params.categoryId = filterCategory; 
+
+      const res = await productApi.getAllAdmin(params);
       const newProducts = res.data.data?.content || [];
       
       setProducts(prev => targetPage === 0 ? newProducts : [...prev, ...newProducts]);
@@ -62,7 +81,7 @@ const AdminProducts = () => {
     } finally { 
       setLoading(false); 
     }
-  }, [page]);
+  }, [page, debouncedSearch, filterStatus, filterCategory]);
 
   useEffect(() => {
     categoryApi.getAll().then(r => setCategories(r.data.data || [])).catch(() => {});
@@ -72,7 +91,6 @@ const AdminProducts = () => {
     fetchProducts(); 
   }, [fetchProducts]);
 
-  // Utility to fully reset the list (useful for deletes/updates)
   const refreshList = () => {
     if (page === 0) fetchProducts(true);
     else setPage(0);
@@ -131,7 +149,7 @@ const AdminProducts = () => {
         preorderNote:      full.preorderNote      || '',
       });
     } catch (err) {
-      toast.error('Failed to load product');
+      toast.error('Failed to load product details');
     }
   };
 
@@ -162,7 +180,7 @@ const AdminProducts = () => {
         toast.success('Product created!');
       }
       closeModal();
-      refreshList(); // Reset to page 0 to see the fresh data
+      refreshList();
     } catch (err) {
       toast.error(err.response?.data?.message || 'Failed to save');
     } finally { setSaving(false); }
@@ -174,8 +192,7 @@ const AdminProducts = () => {
       await productApi.delete(id); 
       toast.success('Product deleted'); 
       refreshList(); 
-    }
-    catch { toast.error('Failed to delete'); }
+    } catch { toast.error('Failed to delete'); }
   };
 
   const handleToggle = async (id) => {
@@ -183,21 +200,20 @@ const AdminProducts = () => {
       await productApi.toggleVisibility(id); 
       toast.success('Visibility updated'); 
       refreshList(); 
-    }
-    catch { toast.error('Failed to update'); }
+    } catch { toast.error('Failed to update'); }
   };
 
   const openImageModal  = (p) => setImageModal({ id: p.id, images: p.images || [], name: p.name });
   const closeImageModal = () => { setImageModal(null); refreshList(); };
 
-  // Note: This still only filters loaded products!
+  // Sync client-side filter with debouncedSearch to avoid shattering
   const filteredProducts = products.filter(p => {
     if (filterCategory && p.category?.id != filterCategory && p.category?.parentId != filterCategory) return false;
     if (filterStatus === 'active'     && !p.isActive)         return false;
     if (filterStatus === 'hidden'     &&  p.isActive)         return false;
     if (filterStatus === 'preorder'   && !p.isPreorder)       return false;
     if (filterStatus === 'outofstock' &&  p.stockQuantity > 0) return false;
-    if (filterSearch && !p.name.toLowerCase().includes(filterSearch.toLowerCase())) return false;
+    if (debouncedSearch && !p.name.toLowerCase().includes(debouncedSearch.toLowerCase())) return false;
     return true;
   });
 
@@ -207,25 +223,32 @@ const AdminProducts = () => {
     return acc;
   }, []);
 
-  if (loading && products.length === 0) return <AdminLayout><Loader fullPage /></AdminLayout>;
+  // Determine if we are actively searching/loading a fresh page
+  const isSearching = filterSearch !== debouncedSearch || (loading && page === 0);
+
+  // Initial full page load check
+  if (loading && products.length === 0 && !filterSearch && !filterStatus && !filterCategory) {
+    return <AdminLayout><Loader fullPage /></AdminLayout>;
+  }
 
   return (
     <AdminLayout>
       <div className="admin-page">
-        <div className="admin-page-header">
+        <div className="admin-page-header" style={{ display: 'flex', flexWrap: 'wrap', gap: '16px', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
           <div>
             <h1 className="admin-page-title">Products</h1>
-            <p className="admin-page-subtitle">{pagination.totalElements || 0} total · {products.length} loaded</p>
+            <p className="admin-page-subtitle">{pagination.totalElements || 0} total · {filteredProducts.length} shown</p>
           </div>
           <button className="btn btn-primary" onClick={openCreate}>+ Add Product</button>
         </div>
 
-        {/* Filters */}
+        {/* Mobile Optimized Filters */}
         <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', marginBottom: 16 }}>
-          <input className="form-input" style={{ maxWidth: 220, height: 36 }}
-            placeholder="Search loaded products..." value={filterSearch}
+          <input className="form-input" style={{ flex: '1 1 200px', height: 36 }}
+            placeholder="Search products..." value={filterSearch}
             onChange={e => setFilterSearch(e.target.value)} />
-          <select className="form-select" style={{ maxWidth: 200, height: 36 }}
+          
+          <select className="form-select" style={{ flex: '1 1 150px', height: 36 }}
             value={filterCategory} onChange={e => setFilterCategory(e.target.value)}>
             <option value="">All Categories</option>
             {categories.map(cat => (
@@ -237,7 +260,8 @@ const AdminProducts = () => {
               </optgroup>
             ))}
           </select>
-          <select className="form-select" style={{ maxWidth: 160, height: 36 }}
+
+          <select className="form-select" style={{ flex: '1 1 150px', height: 36 }}
             value={filterStatus} onChange={e => setFilterStatus(e.target.value)}>
             <option value="">All Status</option>
             <option value="active">Active</option>
@@ -245,17 +269,18 @@ const AdminProducts = () => {
             <option value="preorder">Preorder</option>
             <option value="outofstock">Out of Stock</option>
           </select>
-          {(filterCategory || filterStatus || filterSearch) && (
-            <button className="btn btn-ghost btn-sm"
-              onClick={() => { setFilterCategory(''); setFilterStatus(''); setFilterSearch(''); }}>
+          
+          {(filterStatus || filterSearch || filterCategory) && (
+            <button className="btn btn-ghost btn-sm" style={{ flex: '0 0 auto', height: 36 }}
+              onClick={() => { setFilterStatus(''); setFilterSearch(''); setFilterCategory(''); }}>
               <MdClose size={14} style={{ verticalAlign: 'middle', marginRight: 4 }} /> Clear
             </button>
           )}
         </div>
 
-        {/* Table */}
-        <div className="admin-table-wrap" style={{ maxHeight: '70vh', overflowY: 'auto' }}>
-          <table className="admin-table">
+        {/* Mobile Optimized Table Wrap */}
+        <div className="admin-table-wrap" style={{ maxHeight: '70vh', overflowY: 'auto', overflowX: 'auto', width: '100%', WebkitOverflowScrolling: 'touch' }}>
+          <table className="admin-table" style={{ minWidth: '900px', width: '100%' }}>
             <thead style={{ position: 'sticky', top: 0, zIndex: 1, background: 'var(--bg-card)' }}>
               <tr>
                 <th>Image</th><th>Name</th><th>Category</th><th>Price</th>
@@ -263,87 +288,95 @@ const AdminProducts = () => {
               </tr>
             </thead>
             <tbody>
-              {filteredProducts.map((p, index) => {
-                // 3. Attach the observer to the very last row in the table
-                const isLastElement = filteredProducts.length === index + 1;
-                
-                return (
-                  <tr key={p.id} ref={isLastElement ? lastProductElementRef : null}>
-                    <td>
-                      {p.primaryImageUrl
-                        ? <img src={p.primaryImageUrl} alt={p.name} style={{ width: 48, height: 48, borderRadius: 8, objectFit: 'cover' }} />
-                        : <div style={{ width: 48, height: 48, background: 'var(--bg-hover)', borderRadius: 8, display: 'flex', alignItems: 'center', justifyContent: 'center' }}><MdImage size={24} color="var(--text-muted)" /></div>
-                      }
-                    </td>
-                    <td style={{ maxWidth: 180 }}>
-                      <div style={{ fontWeight: 600, color: 'var(--text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{p.name}</div>
-                      <div className="text-xs text-muted">{p.slug}</div>
-                      {p.isPreorder && <span className="badge badge-yellow" style={{ fontSize: 10, display: 'inline-flex', alignItems: 'center', gap: 3 }}><MdRocketLaunch size={10} /> Preorder</span>}
-                    </td>
-                    <td>
-                      <span className="badge badge-purple">{p.category?.name}</span>
-                      {p.category?.parentId && (
-                        <div className="text-xs text-muted" style={{ marginTop: 2 }}>
-                          ↳ {allCategoriesFlat.find(c => c.id === p.category?.parentId)?.name}
-                        </div>
-                      )}
-                    </td>
-                    <td>
-                      <div className="text-gold">₹{Number(p.discountedPrice || p.price).toLocaleString('en-IN')}</div>
-                      {p.discountPercent > 0 && <div className="text-xs text-muted" style={{ textDecoration: 'line-through' }}>₹{Number(p.price).toLocaleString('en-IN')}</div>}
-                    </td>
-                    <td>
-                      <span className={`badge ${p.stockQuantity === 0 ? 'badge-red' : 'badge-green'}`}>
-                        {p.stockQuantity === 0 ? 'Out' : p.stockQuantity}
-                      </span>
-                    </td>
-                    <td>
-                      <span className="text-muted" style={{ fontSize: 12 }}>
-                        {p.weightGrams ? `${p.weightGrams}g` : '—'}
-                      </span>
-                    </td>
-                    <td>
-                      <span className={`badge ${p.isActive ? 'badge-green' : 'badge-red'}`}>
-                        {p.isActive ? 'Active' : 'Hidden'}
-                      </span>
-                    </td>
-                    <td>
-                      <button className="btn btn-ghost btn-sm" onClick={() => openImageModal(p)}>
-                        <MdPhotoLibrary size={14} style={{ verticalAlign: 'middle', marginRight: 4 }} />{p.images?.length ? `(${p.images.length})` : 'Add'}
-                      </button>
-                    </td>
-                    <td>
-                      <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
-                        <button className="btn btn-ghost btn-sm" onClick={() => openEdit(p)}>Edit</button>
-                        <button className="btn btn-ghost btn-sm" onClick={() => handleToggle(p.id)}>
-                          {p.isActive ? 'Hide' : 'Show'}
+              {isSearching ? (
+                <tr>
+                  <td colSpan={9} style={{ textAlign: 'center', padding: '64px 0' }}>
+                    <Loader />
+                  </td>
+                </tr>
+              ) : (
+                <>
+                  {filteredProducts.map((p) => (
+                    <tr key={p.id}>
+                      <td>
+                        {p.primaryImageUrl
+                          ? <img src={p.primaryImageUrl} alt={p.name} style={{ width: 48, height: 48, borderRadius: 8, objectFit: 'cover' }} />
+                          : <div style={{ width: 48, height: 48, background: 'var(--bg-hover)', borderRadius: 8, display: 'flex', alignItems: 'center', justifyContent: 'center' }}><MdImage size={24} color="var(--text-muted)" /></div>
+                        }
+                      </td>
+                      <td style={{ maxWidth: 180 }}>
+                        <div style={{ fontWeight: 600, color: 'var(--text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{p.name}</div>
+                        <div className="text-xs text-muted">{p.slug}</div>
+                        {p.isPreorder && <span className="badge badge-yellow" style={{ fontSize: 10, display: 'inline-flex', alignItems: 'center', gap: 3 }}><MdRocketLaunch size={10} /> Preorder</span>}
+                      </td>
+                      <td>
+                        <span className="badge badge-purple">{p.category?.name}</span>
+                        {p.category?.parentId && (
+                          <div className="text-xs text-muted" style={{ marginTop: 2 }}>
+                            ↳ {allCategoriesFlat.find(c => c.id === p.category?.parentId)?.name}
+                          </div>
+                        )}
+                      </td>
+                      <td>
+                        <div className="text-gold">₹{Number(p.discountedPrice || p.price).toLocaleString('en-IN')}</div>
+                        {p.discountPercent > 0 && <div className="text-xs text-muted" style={{ textDecoration: 'line-through' }}>₹{Number(p.price).toLocaleString('en-IN')}</div>}
+                      </td>
+                      <td>
+                        <span className={`badge ${p.stockQuantity === 0 ? 'badge-red' : 'badge-green'}`}>
+                          {p.stockQuantity === 0 ? 'Out' : p.stockQuantity}
+                        </span>
+                      </td>
+                      <td>
+                        <span className="text-muted" style={{ fontSize: 12 }}>
+                          {p.weightGrams ? `${p.weightGrams}g` : '—'}
+                        </span>
+                      </td>
+                      <td>
+                        <span className={`badge ${p.isActive ? 'badge-green' : 'badge-red'}`}>
+                          {p.isActive ? 'Active' : 'Hidden'}
+                        </span>
+                      </td>
+                      <td>
+                        <button className="btn btn-ghost btn-sm" onClick={() => openImageModal(p)}>
+                          <MdPhotoLibrary size={14} style={{ verticalAlign: 'middle', marginRight: 4 }} />{p.images?.length ? `(${p.images.length})` : 'Add'}
                         </button>
-                        <button className="btn btn-sm"
-                          style={{ background: 'rgba(244,67,54,0.1)', color: 'var(--accent-red)', border: '1px solid rgba(244,67,54,0.2)' }}
-                          onClick={() => handleDelete(p.id)}>Del</button>
-                      </div>
-                    </td>
-                  </tr>
-                );
-              })}
-              {filteredProducts.length === 0 && !loading && (
-                <tr><td colSpan={9} style={{ textAlign: 'center', padding: 32, color: 'var(--text-muted)' }}>No products found</td></tr>
+                      </td>
+                      <td>
+                        <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+                          <button className="btn btn-ghost btn-sm" onClick={() => openEdit(p)}>Edit</button>
+                          <button className="btn btn-ghost btn-sm" onClick={() => handleToggle(p.id)}>
+                            {p.isActive ? 'Hide' : 'Show'}
+                          </button>
+                          <button className="btn btn-sm"
+                            style={{ background: 'rgba(244,67,54,0.1)', color: 'var(--accent-red)', border: '1px solid rgba(244,67,54,0.2)' }}
+                            onClick={() => handleDelete(p.id)}>Del</button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                  {filteredProducts.length === 0 && (
+                    <tr><td colSpan={9} style={{ textAlign: 'center', padding: 32, color: 'var(--text-muted)' }}>No matching products found</td></tr>
+                  )}
+                </>
               )}
             </tbody>
           </table>
           
-          {/* 4. Show a loading indicator at the bottom while fetching the next batch */}
+          {!isSearching && (
+            <div ref={lastProductElementRef} style={{ height: '10px' }}></div>
+          )}
+
           {loading && page > 0 && (
             <div style={{ padding: '20px', textAlign: 'center', color: 'var(--text-muted)' }}>
-              Loading more products...
+              <Loader />
             </div>
           )}
         </div>
 
-        {/* Modal components remain unchanged below */}
+        {/* Add/Edit Modal */}
         {showModal && (
-          <div className="modal-overlay" onClick={closeModal}>
-            <div className="modal" style={{ maxWidth: 640 }} onClick={e => e.stopPropagation()}>
+          <div className="modal-overlay" style={{ padding: '16px' }} onClick={closeModal}>
+            <div className="modal" style={{ maxWidth: 640, width: '100%', maxHeight: '90vh', overflowY: 'auto' }} onClick={e => e.stopPropagation()}>
               <div className="modal-header">
                 <h3 className="modal-title">{editing ? 'Edit Product' : 'New Product'}</h3>
                 <button className="modal-close" onClick={closeModal}><MdClose size={18} /></button>
@@ -371,7 +404,7 @@ const AdminProducts = () => {
                       placeholder='e.g. "Believe it! — Limited Edition"' />
                   </div>
 
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 'var(--space-4)' }}>
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: 'var(--space-4)' }}>
                     <div className="form-group">
                       <label className="form-label">Price (₹) *</label>
                       <input className="form-input" type="number" min="0" step="0.01"
@@ -396,8 +429,8 @@ const AdminProducts = () => {
                         value={form.weightGrams} placeholder="250"
                         onChange={e => setForm({ ...form, weightGrams: e.target.value })} />
                     </div>
-
-                    <div className="form-group">
+                    
+                    <div className="form-group" style={{ gridColumn: '1 / -1' }}>
                       <label className="form-label">Category *</label>
                       <select
                         className="form-select"
@@ -439,7 +472,7 @@ const AdminProducts = () => {
                     )}
                   </div>
 
-                  <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', marginTop: 8 }}>
+                  <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', marginTop: 16 }}>
                     <input type="checkbox" checked={form.isActive}
                       onChange={e => setForm({ ...form, isActive: e.target.checked })} />
                     <span className="form-label" style={{ margin: 0 }}>Active (visible on website)</span>
@@ -450,7 +483,7 @@ const AdminProducts = () => {
                       onChange={e => setForm({ ...form, isPreorder: e.target.checked })} />
                     <div>
                       <span className="form-label" style={{ margin: 0, color: 'var(--accent-secondary)', display: 'inline-flex', alignItems: 'center', gap: 4 }}><MdRocketLaunch size={14} /> List as Preorder</span>
-                      <p className="text-xs text-muted" style={{ margin: '2px 0 0' }}>Hidden from categories — shown in Preorder section on homepage</p>
+                      <p className="text-xs text-muted" style={{ margin: '2px 0 0' }}>Hidden — shown in Preorder section on homepage</p>
                     </div>
                   </label>
 
@@ -470,7 +503,7 @@ const AdminProducts = () => {
                     </>
                   )}
                 </div>
-                <div className="modal-footer">
+                <div className="modal-footer" style={{ flexWrap: 'wrap', justifyContent: 'flex-end', gap: '8px' }}>
                   <button type="button" className="btn btn-ghost" onClick={closeModal}>Cancel</button>
                   <button type="submit" className="btn btn-primary" disabled={saving}>
                     {saving ? 'Saving...' : editing ? 'Update' : 'Create'}
@@ -483,10 +516,10 @@ const AdminProducts = () => {
 
         {/* Image Modal */}
         {imageModal && (
-          <div className="modal-overlay" onClick={closeImageModal}>
-            <div className="modal" style={{ maxWidth: 680, width: '95%' }} onClick={e => e.stopPropagation()}>
+          <div className="modal-overlay" style={{ padding: '16px' }} onClick={closeImageModal}>
+            <div className="modal" style={{ maxWidth: 680, width: '100%' }} onClick={e => e.stopPropagation()}>
               <div className="modal-header">
-                <h2>Images — {imageModal.name}</h2>
+                <h2 style={{ fontSize: '1.2rem', margin: 0, textOverflow: 'ellipsis', overflow: 'hidden', whiteSpace: 'nowrap' }}>Images — {imageModal.name}</h2>
                 <button className="modal-close" onClick={closeImageModal}><MdClose size={18} /></button>
               </div>
               <div className="modal-body">
@@ -495,8 +528,7 @@ const AdminProducts = () => {
                   existingImages={imageModal.images}
                   onImagesChange={() => {
                     productApi.getById(imageModal.id).then(res => {
-                      const updated = res.data.data;
-                      setImageModal(prev => ({ ...prev, images: updated?.images || [] }));
+                      setImageModal(prev => ({ ...prev, images: res.data.data?.images || [] }));
                       refreshList();
                     }).catch(() => {});
                   }}
