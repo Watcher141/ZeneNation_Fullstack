@@ -45,7 +45,64 @@ const AdminProducts = () => {
     setPage(0);
   }, [debouncedSearch, filterStatus, filterCategory]);
 
-  // Setup Intersection Observer for Infinite Scroll
+  // Fetch Products
+  const fetchProducts = useCallback(async (resetPage = false) => {
+    const targetPage = resetPage ? 0 : page;
+    setLoading(true);
+    try {
+      const params = { page: targetPage, size: 10 };
+      
+      // We pass the search text to the backend to find items deep in the pagination
+      if (debouncedSearch) params.search = debouncedSearch;
+
+      const res = await productApi.getAllAdmin(params);
+      const newProducts = res.data.data?.content || [];
+      
+      setProducts(prev => targetPage === 0 ? newProducts : [...prev, ...newProducts]);
+      setPagination(res.data.data || {});
+    } catch { 
+      toast.error('Failed to load products'); 
+    } finally { 
+      setLoading(false); 
+    }
+  }, [page, debouncedSearch]); 
+
+  useEffect(() => {
+    categoryApi.getAll().then(r => setCategories(r.data.data || [])).catch(() => {});
+  }, []);
+
+  useEffect(() => { 
+    fetchProducts(); 
+  }, [fetchProducts]);
+
+  // Cross-reference categories array to handle Parent -> Subcategory logic accurately
+  const filteredProducts = products.filter(p => {
+    if (filterCategory) {
+      const pCatId = String(p.category?.id);
+      const fCatId = String(filterCategory);
+      
+      let match = pCatId === fCatId;
+      
+      // If it's not a direct match, check if the selected category is a parent
+      if (!match) {
+        const parentCat = categories.find(c => String(c.id) === fCatId);
+        if (parentCat?.subcategories?.some(sub => String(sub.id) === pCatId)) {
+          match = true;
+        }
+      }
+      if (!match) return false;
+    }
+
+    if (filterStatus === 'active'     && !p.isActive)         return false;
+    if (filterStatus === 'hidden'     &&  p.isActive)         return false;
+    if (filterStatus === 'preorder'   && !p.isPreorder)       return false;
+    if (filterStatus === 'outofstock' &&  p.stockQuantity > 0) return false;
+    if (debouncedSearch && !p.name.toLowerCase().includes(debouncedSearch.toLowerCase())) return false;
+    
+    return true;
+  });
+
+  // 1. Standard Intersection Observer for manual scrolling
   const observer = useRef();
   const lastProductElementRef = useCallback(node => {
     if (loading) return;
@@ -60,40 +117,21 @@ const AdminProducts = () => {
     if (node) observer.current.observe(node);
   }, [loading, pagination.totalPages, page]);
 
-  // Fetch Products
-  const fetchProducts = useCallback(async (resetPage = false) => {
-    const targetPage = resetPage ? 0 : page;
-    setLoading(true);
-    try {
-      const params = { page: targetPage, size: 10 };
-      
-      if (debouncedSearch) params.search = debouncedSearch;
-      if (filterStatus) params.status = filterStatus;
-      if (filterCategory) params.categoryId = filterCategory; 
-
-      const res = await productApi.getAllAdmin(params);
-      const newProducts = res.data.data?.content || [];
-      
-      setProducts(prev => targetPage === 0 ? newProducts : [...prev, ...newProducts]);
-      setPagination(res.data.data || {});
-    } catch { 
-      toast.error('Failed to load products'); 
-    } finally { 
-      setLoading(false); 
-    }
-  }, [page, debouncedSearch, filterStatus, filterCategory]);
-
+  // 2. Anti-Starvation Loop: Rapidly fetch next pages if current filters hide everything loaded
   useEffect(() => {
-    categoryApi.getAll().then(r => setCategories(r.data.data || [])).catch(() => {});
-  }, []);
-
-  useEffect(() => { 
-    fetchProducts(); 
-  }, [fetchProducts]);
+    if (!loading && products.length > 0 && filteredProducts.length < 5 && page < (pagination.totalPages - 1)) {
+      setPage(prev => prev + 1);
+    }
+  }, [loading, products.length, filteredProducts.length, page, pagination.totalPages]);
 
   const refreshList = () => {
     if (page === 0) fetchProducts(true);
     else setPage(0);
+  };
+
+  const getParentCategoryName = (productCatId) => {
+    const parent = categories.find(c => c.subcategories?.some(s => String(s.id) === String(productCatId)));
+    return parent?.name;
   };
 
   const openCreate = () => {
@@ -206,27 +244,8 @@ const AdminProducts = () => {
   const openImageModal  = (p) => setImageModal({ id: p.id, images: p.images || [], name: p.name });
   const closeImageModal = () => { setImageModal(null); refreshList(); };
 
-  // Sync client-side filter with debouncedSearch to avoid shattering
-  const filteredProducts = products.filter(p => {
-    if (filterCategory && p.category?.id != filterCategory && p.category?.parentId != filterCategory) return false;
-    if (filterStatus === 'active'     && !p.isActive)         return false;
-    if (filterStatus === 'hidden'     &&  p.isActive)         return false;
-    if (filterStatus === 'preorder'   && !p.isPreorder)       return false;
-    if (filterStatus === 'outofstock' &&  p.stockQuantity > 0) return false;
-    if (debouncedSearch && !p.name.toLowerCase().includes(debouncedSearch.toLowerCase())) return false;
-    return true;
-  });
-
-  const allCategoriesFlat = categories.reduce((acc, cat) => {
-    acc.push(cat);
-    if (cat.subcategories) acc.push(...cat.subcategories);
-    return acc;
-  }, []);
-
-  // Determine if we are actively searching/loading a fresh page
   const isSearching = filterSearch !== debouncedSearch || (loading && page === 0);
 
-  // Initial full page load check
   if (loading && products.length === 0 && !filterSearch && !filterStatus && !filterCategory) {
     return <AdminLayout><Loader fullPage /></AdminLayout>;
   }
@@ -242,7 +261,7 @@ const AdminProducts = () => {
           <button className="btn btn-primary" onClick={openCreate}>+ Add Product</button>
         </div>
 
-        {/* Mobile Optimized Filters */}
+        {/* Filters */}
         <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', marginBottom: 16 }}>
           <input className="form-input" style={{ flex: '1 1 200px', height: 36 }}
             placeholder="Search products..." value={filterSearch}
@@ -278,7 +297,7 @@ const AdminProducts = () => {
           )}
         </div>
 
-        {/* Mobile Optimized Table Wrap */}
+        {/* Table Wrap */}
         <div className="admin-table-wrap" style={{ maxHeight: '70vh', overflowY: 'auto', overflowX: 'auto', width: '100%', WebkitOverflowScrolling: 'touch' }}>
           <table className="admin-table" style={{ minWidth: '900px', width: '100%' }}>
             <thead style={{ position: 'sticky', top: 0, zIndex: 1, background: 'var(--bg-card)' }}>
@@ -311,9 +330,9 @@ const AdminProducts = () => {
                       </td>
                       <td>
                         <span className="badge badge-purple">{p.category?.name}</span>
-                        {p.category?.parentId && (
+                        {getParentCategoryName(p.category?.id) && (
                           <div className="text-xs text-muted" style={{ marginTop: 2 }}>
-                            ↳ {allCategoriesFlat.find(c => c.id === p.category?.parentId)?.name}
+                            ↳ {getParentCategoryName(p.category?.id)}
                           </div>
                         )}
                       </td>
