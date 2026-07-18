@@ -3,6 +3,7 @@ package com.zenenation.backend.service.impl;
 import com.razorpay.RazorpayClient;
 import com.razorpay.RazorpayException;
 import com.zenenation.backend.config.AppProperties;
+import com.zenenation.backend.config.CacheConfig;
 import com.zenenation.backend.dto.request.PlaceOrderRequest;
 import com.zenenation.backend.dto.request.UpdateOrderStatusRequest;
 import com.zenenation.backend.dto.response.OrderItemResponse;
@@ -29,6 +30,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.json.JSONObject;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.cache.CacheManager;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -61,6 +63,13 @@ public class OrderServiceImpl implements OrderService {
     private final ShippingConfigService shippingConfigService;
     private final AppProperties appProperties;
     private final EmailService emailService;
+
+    // NEW: needed to evict ProductService's caches whenever stock changes here.
+    // Without this, placeOrder/cancelOrder update stockQuantity in the DB
+    // correctly, but product listing/detail endpoints keep serving stale
+    // cached values (see CacheConfig.CACHE_PRODUCTS / CACHE_PRODUCT) until
+    // something else happens to evict them.
+    private final CacheManager cacheManager;
 
     @Value("${razorpay.key-id}")
     private String razorpayKeyId;
@@ -174,7 +183,7 @@ public class OrderServiceImpl implements OrderService {
             rewardDiscountAmount = BigDecimal.valueOf(discountRupees);
             discountAmount = discountAmount.add(rewardDiscountAmount);
             totalAmount = PriceUtil.calculateOrderTotal(subtotal, deliveryCharge, codCharge, discountAmount);
-            
+
             if (totalAmount.compareTo(BigDecimal.ZERO) < 0) {
                 totalAmount = BigDecimal.ZERO;
             }
@@ -242,6 +251,11 @@ public class OrderServiceImpl implements OrderService {
             productRepository.save(product);
         }
 
+        // NEW: stock just changed above — evict product caches so listing/detail
+        // endpoints immediately reflect the new stockQuantity instead of serving
+        // stale cached values.
+        evictProductCaches();
+
         Payment payment = Payment.builder()
                 .order(order)
                 .amount(totalAmount)
@@ -270,7 +284,7 @@ public class OrderServiceImpl implements OrderService {
             final String customerEmail = user.getEmail();
             final String customerName = user.getName();
             final String paymentMethodStr = request.getPaymentMethod().name();
-            
+
             CompletableFuture.runAsync(() -> {
                 try {
                     // 1. Send to Customer
@@ -361,6 +375,11 @@ public class OrderServiceImpl implements OrderService {
             }
         }
 
+        // NEW: stock was just restored above — evict product caches so listing/
+        // detail endpoints (e.g. the product page showing "out of stock") pick up
+        // the restored quantity immediately instead of serving a stale cached value.
+        evictProductCaches();
+
         order = orderRepository.save(order);
         log.info("Order cancelled: orderId={}, userId={}", orderId, user.getId());
 
@@ -368,7 +387,7 @@ public class OrderServiceImpl implements OrderService {
         final Order finalOrder = order;
         final String customerEmail = user.getEmail();
         final String customerName = user.getName();
-        
+
         CompletableFuture.runAsync(() -> {
             try {
                 // 1. Notify Admin
@@ -468,6 +487,21 @@ public class OrderServiceImpl implements OrderService {
         }
         if (newStatus == OrderStatus.CANCELLED) {
             rewardService.refundRedeemedPoints(order);
+
+            // NEW: an admin-initiated cancellation also needs to restore stock
+            // and evict caches, same as the user-initiated cancelOrder() path
+            // above. Without this, orders cancelled from the admin panel would
+            // NOT restore stock at all (this path never touched stockQuantity
+            // before), which is a separate but related bug to the one reported.
+            List<OrderItem> items = orderItemRepository.findByOrderId(orderId);
+            for (OrderItem item : items) {
+                if (item.getProduct() != null) {
+                    Product product = item.getProduct();
+                    product.setStockQuantity(product.getStockQuantity() + item.getQuantity());
+                    productRepository.save(product);
+                }
+            }
+            evictProductCaches();
         }
 
         order.setStatus(newStatus);
@@ -506,6 +540,25 @@ public class OrderServiceImpl implements OrderService {
         } catch (RazorpayException e) {
             log.error("Failed to create Razorpay order: {}", e.getMessage());
             throw new PaymentException("Failed to initialize payment. Please try again.");
+        }
+    }
+
+    // -------------------------------------------------------------------------
+    // CACHE HELPERS
+    // -------------------------------------------------------------------------
+
+    /**
+     * NEW: Clears ProductService's caches (CACHE_PRODUCTS for listings,
+     * CACHE_PRODUCT for single-product lookups by id/slug). Called anywhere
+     * in this service that mutates Product.stockQuantity, since those
+     * caches would otherwise keep serving stale stock numbers.
+     */
+    private void evictProductCaches() {
+        if (cacheManager.getCache(CacheConfig.CACHE_PRODUCTS) != null) {
+            cacheManager.getCache(CacheConfig.CACHE_PRODUCTS).clear();
+        }
+        if (cacheManager.getCache(CacheConfig.CACHE_PRODUCT) != null) {
+            cacheManager.getCache(CacheConfig.CACHE_PRODUCT).clear();
         }
     }
 

@@ -32,6 +32,27 @@ const AdminProducts = () => {
   const [filterSearch, setFilterSearch] = useState('');
   const [debouncedSearch, setDebouncedSearch] = useState('');
 
+  // NEW: guards against overlapping fetches. The Intersection Observer and the
+  // "Anti-Starvation" effect below can both request a page increment around the
+  // same render tick — without this lock, two fetches for the same/adjacent
+  // page can both resolve and both append, producing duplicate rows.
+  const fetchLockRef = useRef(false);
+  // NEW: tracks which pages have already been fetched+appended for the current
+  // filter/search session, so even if a duplicate fetch slips through, we never
+  // append the same page's results twice.
+  const fetchedPagesRef = useRef(new Set());
+  // NEW: request sequencing. Typing a new search term (or changing a filter)
+  // can fire a fetch for the *previous* page number a split second before the
+  // "reset to page 0" state update lands (React state updates aren't
+  // synchronous). If that stale request's response arrives AFTER the correct
+  // page-0 response — which can happen, network responses don't always
+  // resolve in the order they were sent — it overwrites the correct results
+  // with stale/wrong ones, making a product silently disappear until some
+  // unrelated action (like editing it) triggers a clean refetch. Every fetch
+  // now gets a ticket number; only the response matching the latest ticket
+  // is allowed to update state.
+  const requestIdRef = useRef(0);
+
   // Debounce search input
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -43,36 +64,75 @@ const AdminProducts = () => {
   // Reset back to page 0 whenever filters change
   useEffect(() => {
     setPage(0);
+    // NEW: new search/filter session — old fetched-pages record no longer applies
+    fetchedPagesRef.current = new Set();
   }, [debouncedSearch, filterStatus, filterCategory]);
 
   // Fetch Products
   const fetchProducts = useCallback(async (resetPage = false) => {
     const targetPage = resetPage ? 0 : page;
+
+    // NEW: skip if this exact page was already fetched in this session (handles
+    // the observer + anti-starvation effect racing to request the same page),
+    // and skip if a fetch is already in flight (handles rapid re-triggers).
+    if (fetchLockRef.current) return;
+    if (targetPage !== 0 && fetchedPagesRef.current.has(targetPage)) return;
+
+    // NEW: claim the next ticket. Only the response matching this exact
+    // ticket is allowed to write to state — any response for an older
+    // ticket means a newer request has since been made (e.g. search text
+    // changed again) and this response is stale, so we throw it away.
+    requestIdRef.current += 1;
+    const myRequestId = requestIdRef.current;
+
+    fetchLockRef.current = true;
     setLoading(true);
     try {
       const params = { page: targetPage, size: 10 };
-      
+
       // We pass the search text to the backend to find items deep in the pagination
       if (debouncedSearch) params.search = debouncedSearch;
 
       const res = await productApi.getAllAdmin(params);
+
+      // NEW: a newer request has been made since this one was fired — discard
+      // this response so it can't overwrite more current data.
+      if (myRequestId !== requestIdRef.current) return;
+
       const newProducts = res.data.data?.content || [];
-      
-      setProducts(prev => targetPage === 0 ? newProducts : [...prev, ...newProducts]);
+
+      fetchedPagesRef.current.add(targetPage);
+
+      setProducts(prev => {
+        if (targetPage === 0) return newProducts;
+        // NEW: de-duplicate by id when appending — a safety net so that even if
+        // an overlapping fetch slips past the lock above, the same product can
+        // never end up rendered twice in the list.
+        const existingIds = new Set(prev.map(p => p.id));
+        const deduped = newProducts.filter(p => !existingIds.has(p.id));
+        return [...prev, ...deduped];
+      });
       setPagination(res.data.data || {});
-    } catch { 
-      toast.error('Failed to load products'); 
-    } finally { 
-      setLoading(false); 
+    } catch {
+      toast.error('Failed to load products');
+    } finally {
+      // NEW: only the most recent request should clear the loading/lock state —
+      // otherwise a slow, now-stale request finishing later could incorrectly
+      // flip loading back off or release the lock while a newer fetch is
+      // still running.
+      if (myRequestId === requestIdRef.current) {
+        setLoading(false);
+        fetchLockRef.current = false;
+      }
     }
-  }, [page, debouncedSearch]); 
+  }, [page, debouncedSearch]);
 
   useEffect(() => {
     categoryApi.getAll().then(r => setCategories(r.data.data || [])).catch(() => {});
   }, []);
 
-  useEffect(() => { 
-    fetchProducts(); 
+  useEffect(() => {
+    fetchProducts();
   }, [fetchProducts]);
 
   // Cross-reference categories array to handle Parent -> Subcategory logic accurately
@@ -80,9 +140,9 @@ const AdminProducts = () => {
     if (filterCategory) {
       const pCatId = String(p.category?.id);
       const fCatId = String(filterCategory);
-      
+
       let match = pCatId === fCatId;
-      
+
       // If it's not a direct match, check if the selected category is a parent
       if (!match) {
         const parentCat = categories.find(c => String(c.id) === fCatId);
@@ -98,7 +158,7 @@ const AdminProducts = () => {
     if (filterStatus === 'preorder'   && !p.isPreorder)       return false;
     if (filterStatus === 'outofstock' &&  p.stockQuantity > 0) return false;
     if (debouncedSearch && !p.name.toLowerCase().includes(debouncedSearch.toLowerCase())) return false;
-    
+
     return true;
   });
 
@@ -107,24 +167,35 @@ const AdminProducts = () => {
   const lastProductElementRef = useCallback(node => {
     if (loading) return;
     if (observer.current) observer.current.disconnect();
-    
+
     observer.current = new IntersectionObserver(entries => {
-      if (entries[0].isIntersecting && page < (pagination.totalPages - 1)) {
+      // NEW: also check the fetch lock here so the observer can't queue a page
+      // bump while a fetch triggered by the anti-starvation effect is in flight.
+      if (entries[0].isIntersecting && page < (pagination.totalPages - 1) && !fetchLockRef.current) {
         setPage(prev => prev + 1);
       }
     });
-    
+
     if (node) observer.current.observe(node);
   }, [loading, pagination.totalPages, page]);
 
   // 2. Anti-Starvation Loop: Rapidly fetch next pages if current filters hide everything loaded
   useEffect(() => {
-    if (!loading && products.length > 0 && filteredProducts.length < 5 && page < (pagination.totalPages - 1)) {
+    if (
+      !loading &&
+      !fetchLockRef.current && // NEW: don't double-trigger while a fetch is already running
+      products.length > 0 &&
+      filteredProducts.length < 5 &&
+      page < (pagination.totalPages - 1)
+    ) {
       setPage(prev => prev + 1);
     }
   }, [loading, products.length, filteredProducts.length, page, pagination.totalPages]);
 
   const refreshList = () => {
+    // NEW: clear fetched-pages record on manual refresh so re-fetched pages
+    // aren't skipped by the dedupe guard
+    fetchedPagesRef.current = new Set();
     if (page === 0) fetchProducts(true);
     else setPage(0);
   };
@@ -226,18 +297,18 @@ const AdminProducts = () => {
 
   const handleDelete = async (id) => {
     if (!window.confirm('Delete this product?')) return;
-    try { 
-      await productApi.delete(id); 
-      toast.success('Product deleted'); 
-      refreshList(); 
+    try {
+      await productApi.delete(id);
+      toast.success('Product deleted');
+      refreshList();
     } catch { toast.error('Failed to delete'); }
   };
 
   const handleToggle = async (id) => {
-    try { 
-      await productApi.toggleVisibility(id); 
-      toast.success('Visibility updated'); 
-      refreshList(); 
+    try {
+      await productApi.toggleVisibility(id);
+      toast.success('Visibility updated');
+      refreshList();
     } catch { toast.error('Failed to update'); }
   };
 
@@ -266,7 +337,7 @@ const AdminProducts = () => {
           <input className="form-input" style={{ flex: '1 1 200px', height: 36 }}
             placeholder="Search products..." value={filterSearch}
             onChange={e => setFilterSearch(e.target.value)} />
-          
+
           <select className="form-select" style={{ flex: '1 1 150px', height: 36 }}
             value={filterCategory} onChange={e => setFilterCategory(e.target.value)}>
             <option value="">All Categories</option>
@@ -288,7 +359,7 @@ const AdminProducts = () => {
             <option value="preorder">Preorder</option>
             <option value="outofstock">Out of Stock</option>
           </select>
-          
+
           {(filterStatus || filterSearch || filterCategory) && (
             <button className="btn btn-ghost btn-sm" style={{ flex: '0 0 auto', height: 36 }}
               onClick={() => { setFilterStatus(''); setFilterSearch(''); setFilterCategory(''); }}>
@@ -380,7 +451,7 @@ const AdminProducts = () => {
               )}
             </tbody>
           </table>
-          
+
           {!isSearching && (
             <div ref={lastProductElementRef} style={{ height: '10px' }}></div>
           )}
@@ -448,7 +519,7 @@ const AdminProducts = () => {
                         value={form.weightGrams} placeholder="250"
                         onChange={e => setForm({ ...form, weightGrams: e.target.value })} />
                     </div>
-                    
+
                     <div className="form-group" style={{ gridColumn: '1 / -1' }}>
                       <label className="form-label">Category *</label>
                       <select
