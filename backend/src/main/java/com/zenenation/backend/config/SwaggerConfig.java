@@ -9,8 +9,10 @@ import io.swagger.v3.oas.models.security.SecurityRequirement;
 import io.swagger.v3.oas.models.security.SecurityScheme;
 import io.swagger.v3.oas.models.servers.Server;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.context.annotation.Profile;
 
 import java.util.List;
 
@@ -18,7 +20,10 @@ import java.util.List;
  * Configures Swagger UI / OpenAPI 3 documentation.
  *
  * Access at: http://localhost:8080/swagger-ui.html (dev only)
- * Disabled in production via application-prod.yml
+ *
+ * H-03: Disabled in production via @Profile and @ConditionalOnProperty.
+ * - @Profile("!prod")            — skips entire bean when active profile = prod
+ * - @ConditionalOnProperty       — secondary guard via springdoc.swagger-ui.enabled=false
  *
  * FEATURES:
  * - Full API documentation auto-generated from controllers
@@ -28,6 +33,12 @@ import java.util.List;
  * - All endpoints grouped by controller tags
  */
 @Configuration
+@Profile("!prod")   // H-03: entire config is skipped when spring.profiles.active=prod
+@ConditionalOnProperty(
+    name = "springdoc.swagger-ui.enabled",
+    havingValue = "true",
+    matchIfMissing = true   // enabled by default in non-prod environments
+)
 public class SwaggerConfig {
 
     private static final String SECURITY_SCHEME_NAME = "bearerAuth";

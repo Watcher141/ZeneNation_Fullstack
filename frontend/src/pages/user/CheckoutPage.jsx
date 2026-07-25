@@ -8,7 +8,7 @@ import Loader from '../../components/common/Loader';
 import {
   MdLocationOn, MdPayment, MdShoppingCart, MdLocalShipping,
   MdCreditCard, MdCheckCircle, MdArrowBack, MdLocalOffer,
-  MdAdd, MdClose, MdCardGiftcard,
+  MdAdd, MdClose, MdCardGiftcard, MdWarning,
 } from 'react-icons/md';
 import { BsCash } from 'react-icons/bs';
 import { RiSecurePaymentLine } from 'react-icons/ri';
@@ -45,6 +45,9 @@ const CheckoutPage = () => {
   // Must be defined before derived calculations
   const items = cart?.items || [];
   const hasPreorderItems = items.some(item => item.isPreorder);
+
+  // Payment failure modal state
+  const [paymentFailedModal, setPaymentFailedModal] = useState(false);
 
   const totalWeightGrams = items.reduce((sum, item) => sum + (item.weightGrams || 0) * item.quantity, 0);
 
@@ -225,8 +228,9 @@ const CheckoutPage = () => {
           }, 4500);
 
         } catch {
-          toast.error('Payment verification failed. Contact support.');
-          navigate('/orders');
+          // Show the detailed refund-assurance modal instead of a bare toast.
+          // The user may have been charged — we owe them a clear explanation.
+          setPaymentFailedModal(true);
         }
       },
       prefill: {
@@ -258,6 +262,48 @@ const CheckoutPage = () => {
   };
 
   if (loading) return <Loader fullPage />;
+
+  // ── Payment Failure Modal ──────────────────────────────────────────────
+  // Shown when Razorpay payment verification fails (signature mismatch or
+  // network error after the user may have already been charged).
+  if (paymentFailedModal) {
+    return (
+      <div className="pf-modal-overlay">
+        <div className="pf-modal">
+          <div className="pf-modal-icon">
+            <MdWarning size={36} color="var(--accent-red)" />
+          </div>
+          <h2 className="pf-modal-title">Payment Could Not Be Verified</h2>
+          <p className="pf-modal-body">
+            We were unable to confirm your payment with Razorpay.
+          </p>
+          <div className="pf-modal-assurance">
+            <p>
+              <strong>If any money was deducted</strong> from your account, it will
+              be automatically refunded by Razorpay within <strong>5 to 7 business days</strong>.
+            </p>
+            <p style={{ marginTop: '0.5rem' }}>
+              <strong>If you used reward points</strong>, they will be restored to your
+              wallet within <strong>30 minutes</strong> by our system.
+            </p>
+          </div>
+          <p className="pf-modal-contact">
+            For urgent help, email us at{' '}
+            <a href="mailto:zenenationstore@gmail.com">zenenationstore@gmail.com</a>
+            {' '}with your order details.
+          </p>
+          <div className="pf-modal-actions">
+            <button
+              className="btn btn-primary btn-full"
+              onClick={() => { setPaymentFailedModal(false); navigate('/orders'); }}
+            >
+              <MdCheckCircle size={18} /> Go to My Orders
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   // ── NEW: Render the Luck Royale Animation if order is successful ──
   if (orderSuccess) {

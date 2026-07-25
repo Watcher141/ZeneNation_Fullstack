@@ -71,6 +71,10 @@ public class OrderServiceImpl implements OrderService {
     // something else happens to evict them.
     private final CacheManager cacheManager;
 
+    // L-05: admin email now read from config (app.admin.email) not hardcoded
+    @Value("${app.admin.email:zenenationstore@gmail.com}")
+    private String adminEmail;
+
     @Value("${razorpay.key-id}")
     private String razorpayKeyId;
 
@@ -213,6 +217,14 @@ public class OrderServiceImpl implements OrderService {
 
         order = orderRepository.save(order);
 
+        // C-03: record coupon usage NOW that the order has a persisted ID.
+        // Previously validateAndGetCoupon() was called but recordCouponUsage()
+        // was never invoked, so usedCount never incremented and per-user
+        // limits were never enforced after the first validation check.
+        if (appliedCoupon != null) {
+            couponService.recordCouponUsage(appliedCoupon, user.getId(), order.getId());
+        }
+
         if (rewardPointsToRedeem > 0) {
             rewardService.redeemPoints(user.getId(), rewardPointsToRedeem, order);
         }
@@ -299,10 +311,10 @@ public class OrderServiceImpl implements OrderService {
                 }
 
                 try {
-                    // 2. Send to Admin
-                    log.info("Attempting to send new COD order admin notification to zenenationstore@gmail.com");
+                    // 2. Send to Admin — L-05: use injected adminEmail, not hardcoded string
+                    log.info("Attempting to send new COD order admin notification to {}", adminEmail);
                     emailService.sendNewOrderAdminEmail(
-                            "zenenationstore@gmail.com",
+                            adminEmail,
                             finalOrder.getOrderNumber(),
                             customerName,
                             finalTotalAmount,
@@ -354,12 +366,17 @@ public class OrderServiceImpl implements OrderService {
         Order order = orderRepository.findByIdAndUserId(orderId, user.getId())
                 .orElseThrow(() -> new ResourceNotFoundException("Order", "id", orderId));
 
+        // L-02: PAYMENT_FAILED orders must also be non-cancellable via this
+        // user-facing endpoint. Their stock was already decremented at placement
+        // and NOT yet restored, so calling cancel again would double-restore.
+        // (The PaymentTimeoutScheduler handles restoration for abandoned payments.)
         if (order.getStatus() == OrderStatus.SHIPPED
                 || order.getStatus() == OrderStatus.DELIVERED
-                || order.getStatus() == OrderStatus.CANCELLED) {
+                || order.getStatus() == OrderStatus.CANCELLED
+                || order.getStatus() == OrderStatus.PAYMENT_FAILED) {
             throw new BadRequestException(
                     "This order cannot be cancelled because it has already been " +
-                    order.getStatus().name().toLowerCase() + ". " +
+                    order.getStatus().name().toLowerCase().replace('_', ' ') + ". " +
                     "Once an order is shipped, cancellation is not possible."
             );
         }
@@ -391,9 +408,10 @@ public class OrderServiceImpl implements OrderService {
         CompletableFuture.runAsync(() -> {
             try {
                 // 1. Notify Admin
-                log.info("Attempting to send admin cancellation email to zenenationstore@gmail.com");
+                // L-05: use injected adminEmail, not hardcoded string
+                log.info("Attempting to send admin cancellation email to {}", adminEmail);
                 emailService.sendOrderCancellationAdminEmail(
-                        "zenenationstore@gmail.com",
+                        adminEmail,
                         finalOrder.getOrderNumber(),
                         customerName,
                         finalOrder.getTotalAmount().toPlainString()
@@ -437,7 +455,11 @@ public class OrderServiceImpl implements OrderService {
                 throw new BadRequestException("Invalid order status: " + status);
             }
         } else {
-            orders = orderRepository.findAll(pageable);
+            // Exclude PAYMENT_FAILED from the default "all orders" view.
+            // These are ghost orders from abandoned Razorpay sessions — they
+            // should not clutter the admin panel. Admin can still see them by
+            // passing ?status=PAYMENT_FAILED explicitly.
+            orders = orderRepository.findByStatusNot(OrderStatus.PAYMENT_FAILED, pageable);
         }
 
         return PagedResponse.of(orders.map(o -> toOrderResponse(o, null, null, o.getUser())));
@@ -522,6 +544,10 @@ public class OrderServiceImpl implements OrderService {
     // -------------------------------------------------------------------------
 
     private String createRazorpayOrder(Long ourOrderId, BigDecimal amount) {
+        // L-06: RazorpayClient is instantiated per-request here because the
+        // Razorpay SDK does not expose a thread-safe singleton. We keep the
+        // instantiation localised to this private method so it's easy to swap
+        // for a shared bean if the SDK ever supports it.
         try {
             RazorpayClient client = new RazorpayClient(razorpayKeyId, razorpayKeySecret);
 

@@ -139,16 +139,21 @@ public class CloudinaryServiceImpl implements CloudinaryService {
 
     @Override
     public Map<String, String> replaceImage(String oldPublicId, MultipartFile newFile, String folder) {
-        // Validate new file first — if it's invalid, don't delete the old one
+        // L-01: Validate and upload new image FIRST.
+        // If upload fails, the old image is still intact — no data loss.
+        // Previously we deleted old before uploading new, which meant a failed
+        // upload left the product permanently imageless.
         validateImageFile(newFile);
 
-        // Delete old image
+        // Upload new image
+        Map<String, String> result = uploadImage(newFile, folder);
+
+        // Only delete old image AFTER the new one is safely uploaded
         if (oldPublicId != null && !oldPublicId.isBlank()) {
             deleteImage(oldPublicId);
         }
 
-        // Upload new image
-        return uploadImage(newFile, folder);
+        return result;
     }
 
     // -------------------------------------------------------------------------

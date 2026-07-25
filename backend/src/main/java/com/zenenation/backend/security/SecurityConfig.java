@@ -61,7 +61,12 @@ public class SecurityConfig {
                     "/swagger-ui/**", "/swagger-ui.html",
                     "/api-docs/**",   "/api-docs.yaml"
                 ).permitAll()
-                .requestMatchers("/actuator/**").permitAll()
+                // H-04: Only the health endpoint is public — lets load balancers
+                // and uptime monitors check liveness without exposing internals.
+                // All other actuator endpoints (metrics, env, loggers, etc.)
+                // require ADMIN so they are not reachable by anonymous callers.
+                .requestMatchers("/actuator/health", "/actuator/health/**").permitAll()
+                .requestMatchers("/actuator/**").hasRole("ADMIN")
                 .requestMatchers("/ping").permitAll()
                 .requestMatchers(HttpMethod.GET, "/api/v1/announcements/active").permitAll()
                 .requestMatchers(HttpMethod.GET, "/api/v1/home-sections/active").permitAll()
@@ -122,20 +127,20 @@ public class SecurityConfig {
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration config = new CorsConfiguration();
 
+        // H-05: Use an explicit allowlist instead of wildcard subdomain patterns.
+        // "https://*.vercel.app" matches ANY Vercel deployment (including attackers').
+        // All legitimate frontend origins must be declared explicitly here or
+        // provided via the app.cors.allowed-origins property.
         List<String> origins = new ArrayList<>();
+        origins.add("https://zenenation.in");
+        origins.add("https://www.zenenation.in");
         origins.add("http://localhost:3000");
         origins.add("http://localhost:5173");
-        origins.add("https://*.vercel.app");
-        origins.add("https://*.onrender.com");
         if (corsAllowedOrigins != null) {
+            // Extra origins from application.yml / env (e.g. FRONTEND_URL in Render)
             origins.addAll(corsAllowedOrigins);
         }
-        config.setAllowedOriginPatterns(List.of(
-            "https://zenenation.in",
-            "https://www.zenenation.in",
-            "http://localhost:5173",
-            "https://*.vercel.app"
-        ));
+        config.setAllowedOriginPatterns(origins);
 
         config.setAllowedMethods(List.of(
             "GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"

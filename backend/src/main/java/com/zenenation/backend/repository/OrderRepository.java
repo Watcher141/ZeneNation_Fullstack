@@ -54,6 +54,13 @@ public interface OrderRepository extends JpaRepository<Order, Long> {
     Page<Order> findByPaymentMethod(PaymentMethod paymentMethod, Pageable pageable);
 
     /**
+     * Admin default listing — excludes a given status so that
+     * PAYMENT_FAILED ghost orders are hidden from the main order panel.
+     * Admin can still see them via the explicit status filter.
+     */
+    Page<Order> findByStatusNot(OrderStatus status, Pageable pageable);
+
+    /**
      * Admin: get orders placed within a date range — paginated.
      * Used for daily/weekly/monthly order reports.
      */
@@ -100,4 +107,17 @@ public interface OrderRepository extends JpaRepository<Order, Long> {
             @Param("userId") Long userId,
             @Param("productId") Long productId
     );
+
+    /**
+     * C-01/C-02: Find ONLINE orders still in PENDING status that were created
+     * before the given cutoff time. Used by PaymentTimeoutScheduler to
+     * detect payments the user abandoned without completing Razorpay checkout.
+     */
+    @Query("""
+            SELECT o FROM Order o
+            WHERE o.paymentMethod = com.zenenation.backend.enums.PaymentMethod.ONLINE
+            AND o.status = com.zenenation.backend.enums.OrderStatus.PENDING
+            AND o.createdAt < :cutoff
+            """)
+    java.util.List<Order> findAbandonedOnlineOrders(@Param("cutoff") LocalDateTime cutoff);
 }

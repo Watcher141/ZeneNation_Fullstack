@@ -45,9 +45,11 @@ public class AbandonedCartScheduler {
                         BigDecimal price = item.getProduct().getPrice();
                         BigDecimal discount = item.getProduct().getDiscountPercent();
                         if (discount != null && discount.compareTo(BigDecimal.ZERO) > 0) {
-                            // price * (1 - discountPercent/100)
+                            // M-03: divide() without RoundingMode throws ArithmeticException
+                            // for non-terminating decimals (e.g. 100/3 = 33.333...).
+                            // Use HALF_UP with scale 2 to avoid crashing the scheduler.
                             BigDecimal multiplier = BigDecimal.ONE
-                                    .subtract(discount.divide(BigDecimal.valueOf(100)));
+                                    .subtract(discount.divide(BigDecimal.valueOf(100), 10, java.math.RoundingMode.HALF_UP));
                             price = price.multiply(multiplier);
                         }
                         return price.doubleValue() * item.getQuantity();
