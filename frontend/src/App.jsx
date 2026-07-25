@@ -19,6 +19,7 @@ import SearchPage from './pages/public/SearchPage';
 import NotFoundPage from './pages/public/NotFoundPage';
 import PreorderPage from './pages/public/PreorderPage';
 import LandingPage from './pages/public/LandingPage';
+import TrackOrderPage from './pages/public/TrackOrderPage';
 
 // Auth pages
 import LoginPage from './pages/auth/LoginPage';
@@ -83,6 +84,7 @@ const App = () => {
             <Route path="/products/:slug" element={<AppLayout><ProductDetailPage /></AppLayout>} />
             <Route path="/search" element={<AppLayout><SearchPage /></AppLayout>} />
             <Route path="/preorder" element={<AppLayout><PreorderPage /></AppLayout>} />
+            <Route path="/track-order" element={<AppLayout><TrackOrderPage /></AppLayout>} />
 
             {/* ── Guest only ── */}
             <Route path="/login" element={<GuestRoute><LoginPage /></GuestRoute>} />

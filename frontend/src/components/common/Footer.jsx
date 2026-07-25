@@ -117,8 +117,9 @@ const Footer = () => {
           <div className="footer-row">
             <span className="footer-row-title">Support:</span>
             <div className="footer-links-group">
+              <Link to="/track-order">Track My Order</Link>
               <Link to="/forgot-password">Forgot Password</Link>
-              <a href="mailto:support@zenenation.com">Contact Us</a>
+              <a href="mailto:zenenationstore@gmail.com">Contact Us</a>
             </div>
           </div>
         </div>
