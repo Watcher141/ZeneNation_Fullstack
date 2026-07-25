@@ -122,10 +122,23 @@ const CheckoutPage = () => {
   }, [hasPreorderItems, paymentMethod]);
 
   const handleApplyCoupon = async () => {
-    if (!couponCode.trim()) return;
+    // M-07: Validate coupon format before sending to API
+    const trimmed = couponCode.trim();
+    if (!trimmed) {
+      toast.error('Please enter a coupon code');
+      return;
+    }
+    if (trimmed.length > 30) {
+      toast.error('Coupon code is too long');
+      return;
+    }
+    if (!/^[A-Z0-9_-]+$/.test(trimmed)) {
+      toast.error('Invalid coupon format — use letters, numbers, _ or - only');
+      return;
+    }
     setCouponLoading(true);
     try {
-      const res = await couponApi.validate({ code: couponCode }, subtotal + deliveryCharge);
+      const res = await couponApi.validate({ code: trimmed }, subtotal + deliveryCharge);
       setCouponData(res.data.data);
       toast.success(res.data.data.message);
     } catch (err) {

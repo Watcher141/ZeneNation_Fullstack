@@ -4,18 +4,55 @@ import { Link, useLocation } from 'react-router-dom';
 import { orderApi } from '../../api/apiCollections';
 import Loader from '../../components/common/Loader';
 import toast from 'react-hot-toast';
-import { MdInfo, MdInventory2, MdImage, MdLock, MdLocalShipping } from 'react-icons/md';
+import { MdInfo, MdInventory2, MdImage, MdLock, MdLocalShipping, MdWarning, MdClose, MdCancel } from 'react-icons/md';
 import './OrdersPage.css';
 
+// ── M-05: Added PAYMENT_PENDING to status badge map ──
 const statusBadge = {
-  PENDING:        'badge-red',
-  CONFIRMED:      'badge-blue',
-  PROCESSING:     'badge-purple',
-  SHIPPED:        'badge-gold',
-  DELIVERED:      'badge-green',
-  CANCELLED:      'badge-red',
-  PAYMENT_FAILED: 'badge-red',
+  PENDING:         'badge-red',
+  CONFIRMED:       'badge-blue',
+  PROCESSING:      'badge-purple',
+  SHIPPED:         'badge-gold',
+  DELIVERED:       'badge-green',
+  CANCELLED:       'badge-red',
+  PAYMENT_FAILED:  'badge-red',
+  PAYMENT_PENDING: 'badge-red',   // was missing — caused default 'badge-blue' fallback
 };
+
+// ── M-04: In-app Cancel Confirmation Modal ──
+const CancelConfirmModal = ({ orderNumber, onConfirm, onCancel, loading }) => (
+  <div className="cancel-modal-overlay" role="dialog" aria-modal="true" aria-label="Cancel order confirmation">
+    <div className="cancel-modal">
+      <div className="cancel-modal-icon">
+        <MdWarning size={32} color="var(--accent-red)" />
+      </div>
+      <h3 className="cancel-modal-title">Cancel Order?</h3>
+      <p className="cancel-modal-body">
+        Are you sure you want to cancel order <strong>{orderNumber}</strong>?
+        This action cannot be undone.
+      </p>
+      <div className="cancel-modal-actions">
+        <button
+          className="btn btn-ghost"
+          onClick={onCancel}
+          disabled={loading}
+          id="cancel-modal-keep"
+        >
+          <MdClose size={16} /> Keep Order
+        </button>
+        <button
+          className="btn"
+          style={{ background: 'rgba(244,67,54,0.15)', color: 'var(--accent-red)', border: '1px solid rgba(244,67,54,0.3)' }}
+          onClick={onConfirm}
+          disabled={loading}
+          id="cancel-modal-confirm"
+        >
+          <MdCancel size={16} /> {loading ? 'Cancelling…' : 'Yes, Cancel'}
+        </button>
+      </div>
+    </div>
+  </div>
+);
 
 const OrdersPage = () => {
   const location = useLocation();
@@ -24,7 +61,10 @@ const OrdersPage = () => {
   const [loading, setLoading] = useState(true);
   const [page, setPage] = useState(0);
   const [cancellingId, setCancellingId] = useState(null);
-  
+
+  // ── M-04: Modal state instead of window.confirm ──
+  const [confirmModal, setConfirmModal] = useState(null); // { orderId, orderNumber }
+
   // ── Catch the trigger flag from CheckoutPage ──
   const [showStars, setShowStars] = useState(location.state?.showStars || false);
 
@@ -43,45 +83,60 @@ const OrdersPage = () => {
   // ── Handle Animation Cleanup ──
   useEffect(() => {
     if (showStars) {
-      // Clear router state so it doesn't replay on page refresh
       window.history.replaceState({}, document.title);
-      
-      // Remove animation from DOM after 4 seconds (3.5s animation + 0.5s fade)
       const timer = setTimeout(() => setShowStars(false), 4000);
       return () => clearTimeout(timer);
     }
   }, [showStars]);
 
-  const handleCancel = async (orderId) => {
-    if (!window.confirm('Cancel this order?')) return;
+  // ── M-04: Open modal instead of window.confirm ──
+  const requestCancel = (orderId, orderNumber) => {
+    setConfirmModal({ orderId, orderNumber });
+  };
+
+  const handleConfirmCancel = async () => {
+    if (!confirmModal) return;
+    const { orderId } = confirmModal;
     setCancellingId(orderId);
     try {
       await orderApi.cancelOrder(orderId);
       toast.success('Order cancelled');
+      setConfirmModal(null);
       fetchOrders();
     } catch (err) {
       toast.error(err.response?.data?.message || 'Cannot cancel this order');
-    } finally { setCancellingId(null); }
+    } finally {
+      setCancellingId(null);
+    }
   };
 
   if (loading) return <Loader fullPage />;
 
   return (
     <div className="page-wrapper">
-      
+
+      {/* ── M-04: Cancel Confirmation Modal ── */}
+      {confirmModal && (
+        <CancelConfirmModal
+          orderNumber={confirmModal.orderNumber}
+          onConfirm={handleConfirmCancel}
+          onCancel={() => setConfirmModal(null)}
+          loading={cancellingId === confirmModal.orderId}
+        />
+      )}
+
       {/* ── EPIC SUCCESS OVERLAY ── */}
       {showStars && (
         <div className="epic-success-overlay">
-          {/* Falling Glowing Stars */}
           <div className="stars-container">
             {[...Array(40)].map((_, i) => {
-              const size = Math.random() * 2 + 0.5; // Random size
+              const size = Math.random() * 2 + 0.5;
               return (
-                <div 
-                  key={i} 
-                  className="epic-star" 
-                  style={{ 
-                    left: `${Math.random() * 100}%`, 
+                <div
+                  key={i}
+                  className="epic-star"
+                  style={{
+                    left: `${Math.random() * 100}%`,
                     animationDelay: `${Math.random() * 3}s`,
                     animationDuration: `${2 + Math.random() * 3}s`,
                     fontSize: `${size}rem`,
@@ -93,8 +148,6 @@ const OrdersPage = () => {
               );
             })}
           </div>
-
-          {/* The Glowing Skewed Banner */}
           <div className="epic-yellow-banner">
             <div className="epic-banner-content">
               <h1>CONGRATULATIONS !!</h1>
@@ -153,15 +206,39 @@ const OrdersPage = () => {
                         {new Date(order.createdAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'long', year: 'numeric' })}
                       </span>
                     </div>
-                    <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                    <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
                       <span className={`badge ${statusBadge[order.status] || 'badge-blue'}`}>
-                        {order.status}
+                        {/* M-05: Show friendlier label for PAYMENT_PENDING */}
+                        {order.status === 'PAYMENT_PENDING' ? 'Payment Pending' : order.status}
                       </span>
                       <span className={`badge ${order.paymentStatus === 'PAID' ? 'badge-green' : 'badge-red'}`}>
                         {order.paymentMethod} · {order.paymentStatus}
                       </span>
                     </div>
                   </div>
+
+                  {/* M-05: Informational banner for PAYMENT_PENDING orders */}
+                  {order.status === 'PAYMENT_PENDING' && (
+                    <div style={{
+                      background: 'rgba(244,67,54,0.07)',
+                      borderBottom: '1px solid rgba(244,67,54,0.2)',
+                      padding: '8px 20px',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: 8,
+                      fontSize: 'var(--text-sm)',
+                      color: 'var(--accent-red)',
+                    }}>
+                      <MdWarning size={16} />
+                      <span>
+                        This order's payment was not completed. If you were charged, please contact us at{' '}
+                        <a href="mailto:zenenationstore@gmail.com" style={{ color: 'var(--accent-primary)' }}>
+                          zenenationstore@gmail.com
+                        </a>
+                        {' '}with your order number.
+                      </span>
+                    </div>
+                  )}
 
                   {/* Items preview */}
                   <div className="order-card-items">
@@ -192,14 +269,16 @@ const OrdersPage = () => {
                           ₹{Number(order.totalAmount).toLocaleString('en-IN')}
                         </span>
                       </div>
-                      
-                      {/* Static Delivery Note */}
-                      {order.status !== 'CANCELLED' && (
-                        <div style={{ 
-                          display: 'flex', 
-                          alignItems: 'center', 
-                          gap: '6px', 
-                          color: 'var(--accent-green)', 
+
+                      {/* Static Delivery Note — hide for terminal / payment-issue states */}
+                      {order.status !== 'CANCELLED'
+                        && order.status !== 'PAYMENT_FAILED'
+                        && order.status !== 'PAYMENT_PENDING' && (
+                        <div style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '6px',
+                          color: 'var(--accent-green)',
                           fontSize: 'var(--text-sm)',
                           fontWeight: 500
                         }}>
@@ -210,11 +289,13 @@ const OrdersPage = () => {
                     </div>
 
                     <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                      {/* M-04: Use in-app modal instead of window.confirm */}
                       {(order.status === 'PENDING' || order.status === 'CONFIRMED') && (
                         <button className="btn btn-sm"
                           style={{ background: 'rgba(244,67,54,0.1)', color: 'var(--accent-red)', border: '1px solid rgba(244,67,54,0.2)' }}
-                          onClick={() => handleCancel(order.id)}
-                          disabled={cancellingId === order.id}>
+                          onClick={() => requestCancel(order.id, order.orderNumber)}
+                          disabled={cancellingId === order.id}
+                        >
                           {cancellingId === order.id ? 'Cancelling...' : 'Cancel Order'}
                         </button>
                       )}

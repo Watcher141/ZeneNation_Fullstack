@@ -52,7 +52,18 @@ const ProductDetailPage = () => {
   useEffect(() => {
     productApi.getBySlug(slug)
       .then(r => setProduct(r.data.data))
-      .catch(() => navigate('/404'))
+      .catch(err => {
+        // L-03: Distinguish 404 (product not found) from network/server errors.
+        // Previously always navigated to '/404' which hid real errors.
+        // Note: App.jsx uses path="*" as the catch-all, so navigate('*') won't
+        // work — we navigate to a non-existent slug so the wildcard catches it.
+        if (err.response?.status === 404) {
+          navigate('/not-found', { replace: true });
+        } else {
+          toast.error('Could not load product. Please check your connection.');
+          navigate('/', { replace: true });
+        }
+      })
       .finally(() => setLoading(false));
   }, [slug]);
 
@@ -174,7 +185,11 @@ const ProductDetailPage = () => {
 
             <div className="product-detail-desc">
               <h3>About this product</h3>
-              <p>{product.description}</p>
+              {/* I-04: null guard — avoids empty <p> tag when description is null */}
+              {product.description
+                ? <p>{product.description}</p>
+                : <p className="text-muted" style={{ fontStyle: 'italic' }}>No description available.</p>
+              }
             </div>
           </div>
         </div>

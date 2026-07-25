@@ -59,8 +59,9 @@ const ForgotPasswordPage = () => {
                 required
               />
             </div>
-            <button type="submit" className="btn btn-primary btn-full" disabled={loading}>
-              {loading ? 'Sending...' : 'Send Reset Link'}
+            {/* L-04: disabled when `sent` is true so repeated submissions are blocked */}
+            <button type="submit" className="btn btn-primary btn-full" disabled={loading || sent}>
+              {loading ? 'Sending...' : sent ? 'Link Sent ✓' : 'Send Reset Link'}
             </button>
           </form>
         )}
