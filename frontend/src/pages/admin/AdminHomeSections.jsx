@@ -162,13 +162,13 @@ const AdminHomeSections = () => {
 
   // ── Product Picker Handlers ──
   const openPicker = (section) => {
-  setAllProducts([]);       // reset first
-  setPickerPage(0);
-  setProductSearch('');
-  setDebouncedSearch('');   // ← this is the key fix
-  setHasMoreProducts(true);
-  setPickerSection(section); // set section LAST so effect fires with clean state
-};
+    setAllProducts([]);       // reset first
+    setPickerPage(0);
+    setProductSearch('');
+    setDebouncedSearch('');   // ← this is the key fix
+    setHasMoreProducts(true);
+    setPickerSection(section); // set section LAST so effect fires with clean state
+  };
 
   const closePicker = () => { 
     setPickerSection(null); 
@@ -401,17 +401,51 @@ const AdminHomeSections = () => {
                       })
                       .map(p => {
                         const inSection = sectionProductIds.has(p.id);
+                        const isOutOfStock = p.stockQuantity === 0;
+                        const isLowStock = !isOutOfStock && p.stockQuantity <= 2;
+                      
                         return (
-                          <div key={p.id} style={{ flexShrink: 0, display: 'flex', alignItems: 'center', gap: 12, padding: '8px 12px', borderRadius: 8, background: inSection ? 'rgba(76,175,80,0.06)' : 'var(--bg-tertiary)', border: `1px solid ${inSection ? 'rgba(76,175,80,0.2)' : 'var(--border-color)'}` }}>
+                          <div key={p.id} style={{
+                            flexShrink: 0,
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: 12,
+                            padding: '8px 12px',
+                            borderRadius: 8,
+                            background: inSection ? 'rgba(76,175,80,0.06)' : 'var(--bg-tertiary)',
+                            border: `1px solid ${inSection ? 'rgba(76,175,80,0.2)' : 'var(--border-color)'}`,
+                            borderLeft: isLowStock ? '3px solid #f5a623' : (inSection ? '1px solid rgba(76,175,80,0.2)' : '1px solid var(--border-color)'),
+                            opacity: isOutOfStock ? 0.55 : 1,
+                          }}>
                             {p.primaryImageUrl
                               ? <img src={p.primaryImageUrl} alt={p.name} style={{ width: 40, height: 40, borderRadius: 6, objectFit: 'cover', flexShrink: 0 }} />
                               : <div style={{ width: 40, height: 40, borderRadius: 6, background: 'var(--bg-secondary)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}><MdImage size={20} color="var(--text-muted)" /></div>
                             }
                             <div style={{ flex: 1, minWidth: 0 }}>
-                              <p style={{ margin: 0, fontSize: 14, color: 'var(--text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{p.name}</p>
+                              <p style={{
+                                margin: 0,
+                                fontSize: 14,
+                                color: 'var(--text-primary)',
+                                overflow: 'hidden',
+                                textOverflow: 'ellipsis',
+                                whiteSpace: 'nowrap',
+                                textDecoration: isOutOfStock ? 'line-through' : 'none',
+                              }}>
+                                {p.name}
+                              </p>
                               <p style={{ margin: 0, fontSize: 12, color: 'var(--text-muted)' }}>
                                 ₹{p.discountedPrice || p.price} {p.sku ? `· SKU: ${p.sku}` : ''} {p.category?.name ? `· ${p.category?.name}` : ''}
                               </p>
+                              {isOutOfStock && (
+                                <span style={{ fontSize: 11, color: 'var(--accent-red)', fontWeight: 600 }}>
+                                  Out of Stock
+                                </span>
+                              )}
+                              {isLowStock && (
+                                <span style={{ fontSize: 11, color: '#f5a623', fontWeight: 600 }}>
+                                  Low Stock ({p.stockQuantity} left)
+                                </span>
+                              )}
                             </div>
                             {inSection ? (
                               <button className="btn btn-ghost btn-sm" style={{ color: 'var(--accent-red)', flexShrink: 0 }}
@@ -419,8 +453,18 @@ const AdminHomeSections = () => {
                                 Remove
                               </button>
                             ) : (
-                              <button className="btn btn-ghost btn-sm" style={{ color: 'var(--accent-primary)', flexShrink: 0 }}
-                                onClick={() => handleAddProduct(p.id)}>
+                              <button
+                                className="btn btn-ghost btn-sm"
+                                style={{
+                                  color: isOutOfStock ? 'var(--text-muted)' : 'var(--accent-primary)',
+                                  flexShrink: 0,
+                                  cursor: isOutOfStock ? 'not-allowed' : 'pointer',
+                                  opacity: isOutOfStock ? 0.5 : 1,
+                                }}
+                                disabled={isOutOfStock}
+                                title={isOutOfStock ? 'Cannot add — out of stock' : undefined}
+                                onClick={() => handleAddProduct(p.id)}
+                              >
                                 + Add
                               </button>
                             )}
