@@ -164,16 +164,10 @@ const Navbar = () => {
           <>
             <div style={{ display: 'flex', flexDirection: 'column' }}>
               {searchResults.map((product) => {
-                // FIXED: Advanced URL slugification prevents '---' and removes special characters
-                const productSlug = product.name
-                  ?.toLowerCase()
-                  .replace(/[^a-z0-9]+/g, '-') // Replaces any non-alphanumeric character with a hyphen
-                  .replace(/^-+|-+$/g, '');    // Trims hyphens from the very start or end
-                
                 return (
                   <Link 
                     key={product.id} 
-                    to={`/products/${productSlug}`} 
+                    to={`/products/${product.slug}`} 
                     onClick={() => {
                       setShowSuggestions(false);
                       setSearch('');

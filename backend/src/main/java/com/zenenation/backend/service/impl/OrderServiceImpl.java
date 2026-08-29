@@ -140,13 +140,21 @@ public class OrderServiceImpl implements OrderService {
             totalWeightGrams += (product.getWeightGrams() != null ? product.getWeightGrams() : 0) * item.getQuantity();
         }
 
-        var deliverySlabs = shippingConfigService.getDeliverySlabs();
-        BigDecimal deliveryCharge = PriceUtil.calculateDeliveryCharge(totalWeightGrams, deliverySlabs);
+        // OLD: delivery charge was calculated unconditionally for every payment method
+        // var deliverySlabs = shippingConfigService.getDeliverySlabs();
+        // BigDecimal deliveryCharge = PriceUtil.calculateDeliveryCharge(totalWeightGrams, deliverySlabs);
 
+        // NEW: delivery charge applies to ONLINE only.
+        // COD orders use codCharge ("COD Delivery Charges") instead of the regular delivery charge.
+        BigDecimal deliveryCharge = BigDecimal.ZERO;
         BigDecimal codCharge = BigDecimal.ZERO;
+
         if (request.getPaymentMethod() == PaymentMethod.COD) {
             var codSlabs = shippingConfigService.getCodSlabs();
             codCharge = PriceUtil.calculateCodCharge(subtotal, codSlabs);
+        } else {
+            var deliverySlabs = shippingConfigService.getDeliverySlabs();
+            deliveryCharge = PriceUtil.calculateDeliveryCharge(totalWeightGrams, deliverySlabs);
         }
 
         BigDecimal totalAmount = PriceUtil.calculateOrderTotal(

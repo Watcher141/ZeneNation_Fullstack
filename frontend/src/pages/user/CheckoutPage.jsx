@@ -75,9 +75,15 @@ const CheckoutPage = () => {
   };
 
   const subtotal = Number(cart?.subtotal || 0);
-  const deliveryCharge = shippingConfig
-    ? calculateDeliveryCharge(totalWeightGrams, shippingConfig.deliverySlabs)
-    : 0;
+
+  // NEW: delivery charge applies to ONLINE only; COD has its own "COD Delivery Charges" instead
+  // const deliveryCharge = 0; // OLD (wrong): removed delivery for everyone
+  const deliveryCharge = paymentMethod === 'COD'
+    ? 0
+    : (shippingConfig ? calculateDeliveryCharge(totalWeightGrams, shippingConfig.deliverySlabs) : 0);
+
+  // codCharge renamed conceptually to "COD Delivery Charges" — same calculation,
+  // only applies when paymentMethod === 'COD'
   const codCharge = paymentMethod === 'COD' && shippingConfig
     ? calculateCodCharge(subtotal, shippingConfig.codSlabs)
     : 0;
@@ -86,6 +92,8 @@ const CheckoutPage = () => {
   // Reward: max redeemable = 60% of balance, only if subtotal >= ₹399
   const isRewardEligible = subtotal >= 399;
   const rewardsDiscount = useRewards ? Math.floor(redeemPoints / 2) : 0;  // 2 pts = ₹1
+
+  // NEW: total = Subtotal + (Delivery for ONLINE, or COD Delivery Charges for COD) - discounts
   const total = Math.max(0, subtotal + deliveryCharge + codCharge - discountAmount - rewardsDiscount);
   const codLimit = 10000;
 
@@ -141,7 +149,7 @@ const CheckoutPage = () => {
     }
     setCouponLoading(true);
     try {
-      const res = await couponApi.validate({ code: trimmed }, subtotal + deliveryCharge);
+      const res = await couponApi.validate({ code: trimmed }, subtotal + deliveryCharge); // restored — matches ONLINE behavior
       setCouponData(res.data.data);
       toast.success(res.data.data.message);
     } catch (err) {
@@ -633,20 +641,23 @@ const CheckoutPage = () => {
                   <span>Subtotal</span>
                   <span>Rs.{subtotal.toLocaleString('en-IN')}</span>
                 </div>
-                <div className="price-row">
-                  <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-                    <MdLocalShipping size={16} /> Delivery
-                    {totalWeightGrams > 0 && (
-                      <span className="text-xs text-muted" style={{ fontWeight: 'normal' }}>
-                        ({totalWeightGrams >= 1000 ? `${(totalWeightGrams / 1000).toFixed(2)} kg` : `${totalWeightGrams}g`})
-                      </span>
-                    )}
-                  </span>
-                  <span>{deliveryCharge === 0 ? <span className="text-success">FREE</span> : `Rs.${deliveryCharge}`}</span>
-                </div>
+                {/* Delivery row — shown only for ONLINE; COD shows "COD Delivery Charges" instead */}
+                {paymentMethod !== 'COD' && (
+                  <div className="price-row">
+                    <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                      <MdLocalShipping size={16} /> Delivery
+                      {totalWeightGrams > 0 && (
+                        <span className="text-xs text-muted" style={{ fontWeight: 'normal' }}>
+                          ({totalWeightGrams >= 1000 ? `${(totalWeightGrams / 1000).toFixed(2)} kg` : `${totalWeightGrams}g`})
+                        </span>
+                      )}
+                    </span>
+                    <span>{deliveryCharge === 0 ? <span className="text-success">FREE</span> : `Rs.${deliveryCharge}`}</span>
+                  </div>
+                )}
                 {paymentMethod === 'COD' && codCharge > 0 && (
                   <div className="price-row text-warning">
-                    <span>COD Surcharge</span>
+                    <span>COD Delivery Charges</span>
                     <span>Rs.{codCharge}</span>
                   </div>
                 )}
