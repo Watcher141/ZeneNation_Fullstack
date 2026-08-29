@@ -30,7 +30,8 @@ const isValidJetpostLink = (url) => {
 };
 
 const TrackOrderPage = () => {
-  const [trackingLink, setTrackingLink] = useState('');
+  const [trackingInput, setTrackingInput] = useState('');
+  const [iframeUrl, setIframeUrl] = useState('');
   const [submitted, setSubmitted] = useState(false);
   const [error, setError] = useState('');
   const [iframeError, setIframeError] = useState(false);
@@ -39,7 +40,7 @@ const TrackOrderPage = () => {
   const handlePaste = async () => {
     try {
       const text = await navigator.clipboard.readText();
-      setTrackingLink(text.trim());
+      setTrackingInput(text.trim());
       setError('');
     } catch {
       inputRef.current?.focus();
@@ -48,30 +49,36 @@ const TrackOrderPage = () => {
 
   const handleTrack = (e) => {
     e.preventDefault();
-    const link = trackingLink.trim();
+    const input = trackingInput.trim();
 
-    if (!link) {
-      setError('Please enter your tracking link.');
+    if (!input) {
+      setError('Please enter your AWB Number or tracking link.');
       return;
     }
-    if (!link.startsWith('http://') && !link.startsWith('https://')) {
-      setError('Please paste the full tracking link (starting with https://)');
-      return;
+    
+    let url = input;
+    if (!input.startsWith('http://') && !input.startsWith('https://')) {
+      // Treat as AWB Number
+      url = `https://zenenation.ordertracking.in/track_details.php?awbNum=${input}`;
     }
+    
+    setIframeUrl(url);
     setError('');
     setSubmitted(true);
-    setIframeError(false);
+    // Eagerly block iframe if it's zenenation to avoid X-Frame-Options error
+    setIframeError(url.includes('zenenation.ordertracking.in'));
   };
 
   const handleReset = () => {
     setSubmitted(false);
-    setTrackingLink('');
+    setTrackingInput('');
+    setIframeUrl('');
     setIframeError(false);
     setError('');
   };
 
   const handleOpenInNewTab = () => {
-    window.open(trackingLink, '_blank', 'noopener,noreferrer');
+    window.open(iframeUrl, '_blank', 'noopener,noreferrer');
   };
 
   return (
@@ -85,7 +92,7 @@ const TrackOrderPage = () => {
           </div>
           <h1 className="track-hero-title">Track Your Package</h1>
           <p className="track-hero-subtitle">
-            Paste the tracking link sent to you via WhatsApp or SMS by JetPost to see your package's live status.
+            Enter your AWB Number or paste the tracking link sent to you via WhatsApp or SMS to see your package's live status.
           </p>
         </div>
       </div>
@@ -97,8 +104,8 @@ const TrackOrderPage = () => {
           <div className="track-info-banner">
             <MdInfo size={20} color="var(--accent-blue)" style={{ flexShrink: 0 }} />
             <div>
-              <strong>How it works:</strong> After your order is shipped, JetPost sends a tracking link directly to your
-              WhatsApp or registered mobile number. Paste that link below to track your parcel in real time.
+              <strong>How it works:</strong> After your order is shipped, you will receive an AWB Number and tracking link directly to your
+              WhatsApp or registered mobile number. Enter it below to track your parcel in real time.
             </div>
           </div>
         )}
@@ -108,18 +115,18 @@ const TrackOrderPage = () => {
           <div className="track-card">
             <div className="track-card-header">
               <FaTruck size={22} color="var(--accent-primary)" />
-              <h2>Enter Your Tracking Link</h2>
+              <h2>Enter Your AWB Number or Tracking Link</h2>
             </div>
 
             <form onSubmit={handleTrack} className="track-form">
               <div className="track-input-wrapper">
                 <input
                   ref={inputRef}
-                  type="url"
+                  type="text"
                   className={`track-input ${error ? 'error' : ''}`}
-                  placeholder="https://track.thejetpost.in/... or your JetPost tracking link"
-                  value={trackingLink}
-                  onChange={(e) => { setTrackingLink(e.target.value); setError(''); }}
+                  placeholder="e.g. 123456789 or https://track..."
+                  value={trackingInput}
+                  onChange={(e) => { setTrackingInput(e.target.value); setError(''); }}
                   id="tracking-link-input"
                   autoComplete="off"
                 />
@@ -148,7 +155,7 @@ const TrackOrderPage = () => {
             <div className="track-tip">
               <FaWhatsapp size={16} color="#25D366" />
               <span>
-                <strong>Tip:</strong> Your tracking link is in the WhatsApp or SMS message from JetPost. Long-press the link → Copy Link → Paste here.
+                <strong>Tip:</strong> Your AWB Number or tracking link is in the WhatsApp or SMS message from us.
               </span>
             </div>
           </div>
@@ -168,7 +175,7 @@ const TrackOrderPage = () => {
             {/* Link display */}
             <div className="track-link-display">
               <span className="track-link-label">Tracking URL:</span>
-              <span className="track-link-url">{trackingLink}</span>
+              <span className="track-link-url">{iframeUrl}</span>
               <button className="btn btn-sm track-open-btn" onClick={handleOpenInNewTab} title="Open in new tab">
                 <MdOpenInNew size={16} />
                 Open
@@ -183,8 +190,8 @@ const TrackOrderPage = () => {
                   <span>Loading tracking info…</span>
                 </div>
                 <iframe
-                  key={trackingLink}
-                  src={trackingLink}
+                  key={iframeUrl}
+                  src={iframeUrl}
                   title="Package Tracking"
                   className="track-iframe"
                   sandbox="allow-scripts allow-same-origin allow-forms allow-popups"
@@ -202,13 +209,17 @@ const TrackOrderPage = () => {
             <div className="track-fallback-card">
               <FaBoxOpen size={32} color="var(--accent-secondary)" />
               <div>
-                <p className="track-fallback-title">Can't display inline?</p>
+                <p className="track-fallback-title">
+                  {iframeUrl.includes('zenenation.ordertracking.in') ? 'Tracking Ready' : 'Can\'t display inline?'}
+                </p>
                 <p className="track-fallback-desc">
-                  Some tracking pages block embedding. Click below to open it in a new tab for the full experience.
+                  {iframeUrl.includes('zenenation.ordertracking.in') 
+                    ? 'Click the button below to view your live tracking details on our secure tracking portal.'
+                    : 'Some tracking pages block embedding. Click below to open it in a new tab for the full experience.'}
                 </p>
                 <button className="btn btn-primary" onClick={handleOpenInNewTab} id="open-tracking-tab">
                   <MdOpenInNew size={18} />
-                  Open Tracking Page
+                  {iframeUrl.includes('zenenation.ordertracking.in') ? 'View Tracking Details' : 'Open Tracking Page'}
                 </button>
               </div>
             </div>
