@@ -5,6 +5,7 @@ import { useCart } from '../../context/CartContext';
 import { useAuth } from '../../context/AuthContext';
 import { MdAdd, MdShoppingCart, MdChevronLeft, MdChevronRight } from 'react-icons/md';
 import { useNavigate } from 'react-router-dom';
+import SafeImage from '../common/SafeImage';
 import toast from 'react-hot-toast';
 import './FrequentlyBoughtTogether.css';
 
@@ -78,10 +79,11 @@ const BundleCard = ({ bundle, onAddToCart, addingToCart }) => {
         {allProducts.map((product, index) => (
           <React.Fragment key={product.id}>
             <div className={`fbt-product-thumb ${!checkedIds.has(product.id) ? 'unchecked' : ''}`}>
-              {product.primaryImageUrl
-                ? <img src={product.primaryImageUrl} alt={product.name} />
-                : <div className="fbt-thumb-placeholder">?</div>
-              }
+              <SafeImage
+                src={product.primaryImageUrl}
+                alt={product.name}
+                fallbackIconSize={20}
+              />
               <p className="fbt-thumb-name">{product.name}</p>
             </div>
             {index < allProducts.length - 1 && (

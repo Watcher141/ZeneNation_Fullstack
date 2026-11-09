@@ -6,6 +6,7 @@ import { categoryApi } from '../../api/categoryApi';
 import { homeSectionApi } from '../../api/homeSectionApi';
 import ProductCard from '../../components/product/ProductCard';
 import HorizontalScroll from '../../components/common/HorizontalScroll';
+import SafeImage from '../../components/common/SafeImage';
 import Loader from '../../components/common/Loader';
 import { announcementApi } from '../../api/apiCollections';
 import { MdAutoAwesome, MdImage, MdRocketLaunch, MdCampaign, MdLocalOffer, MdWarning, MdCheckCircle } from 'react-icons/md';
@@ -175,10 +176,12 @@ const HomePage = () => {
             <HorizontalScroll>
               {categories.map(cat => (
                 <Link to={`/products?categoryId=${cat.id}`} key={cat.id} className="category-card category-card--scroll">
-                  {cat.imageUrl
-                    ? <img src={cat.imageUrl} alt={cat.name} />
-                    : <div className="category-icon"><MdImage size={28} color="var(--text-muted)" /></div>
-                  }
+                  <SafeImage
+                    src={cat.imageUrl}
+                    alt={cat.name}
+                    className="category-img"
+                    fallbackIconSize={28}
+                  />
                   <span className="category-name">{cat.name}</span>
                 </Link>
               ))}
@@ -234,9 +237,11 @@ const HomePage = () => {
               {preorders.map(product => (
                 <Link to={`/products/${product.slug}`} key={product.id} className="preorder-home-card preorder-home-card--scroll">
                   <div className="preorder-home-img">
-                    {product.primaryImageUrl
-                      ? <img src={product.primaryImageUrl} alt={product.name} />
-                      : <span><MdImage size={28} color="var(--text-muted)" /></span>}
+                    <SafeImage
+                      src={product.primaryImageUrl}
+                      alt={product.name}
+                      fallbackIconSize={28}
+                    />
                     <div className="preorder-home-badge">PREORDER</div>
                   </div>
                   <div className="preorder-home-info">

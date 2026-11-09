@@ -13,8 +13,9 @@ const ProductCard = ({ product }) => {
   const { isAuthenticated } = useAuth();
   const navigate = useNavigate();
   
-  // NEW: State to track if this specific button is currently loading
+  // State to track if this specific button is currently loading
   const [isAdding, setIsAdding] = useState(false);
+  const [imgError, setImgError] = useState(false);
 
   const handleAddToCart = async (e) => {
     e.preventDefault(); // Prevents the <Link> from triggering navigation
@@ -48,8 +49,13 @@ const ProductCard = ({ product }) => {
     <Link to={`/products/${product.slug}`} className="product-card">
       {/* Image */}
       <div className="product-card-image">
-        {product.primaryImageUrl ? (
-          <img src={product.primaryImageUrl} alt={product.name} loading="lazy" />
+        {!imgError && product.primaryImageUrl ? (
+          <img
+            src={product.primaryImageUrl}
+            alt={product.name}
+            loading="lazy"
+            onError={() => setImgError(true)}
+          />
         ) : (
           <div className="product-card-no-image"><MdImage size={36} color="var(--text-muted)" /></div>
         )}

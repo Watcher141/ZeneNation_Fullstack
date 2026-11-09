@@ -2,6 +2,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import AdminLayout from '../../components/admin/AdminLayout';
 import Loader from '../../components/common/Loader';
+import SafeImage from '../../components/common/SafeImage';
 import { homeSectionApi } from '../../api/homeSectionApi';
 import { productApi } from '../../api/productApi';
 import toast from 'react-hot-toast';
@@ -245,10 +246,12 @@ const AdminHomeSections = () => {
                     <div style={{ display: 'flex', gap: 6, marginTop: 10, flexWrap: 'wrap' }}>
                       {section.products.slice(0, 8).map(p => (
                         <div key={p.id} style={{ position: 'relative' }}>
-                          {p.primaryImageUrl
-                            ? <img src={p.primaryImageUrl} alt={p.name} style={{ width: 44, height: 44, borderRadius: 6, objectFit: 'cover', border: '1px solid var(--border-color)' }} />
-                            : <div style={{ width: 44, height: 44, borderRadius: 6, background: 'var(--bg-tertiary)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 20 }}><MdImage size={22} color="var(--text-muted)" /></div>
-                          }
+                          <SafeImage
+                            src={p.primaryImageUrl}
+                            alt={p.name}
+                            style={{ width: 44, height: 44, borderRadius: 6, objectFit: 'cover', border: '1px solid var(--border-color)' }}
+                            fallbackIconSize={22}
+                          />
                         </div>
                       ))}
                       {section.products.length > 8 && (
@@ -366,7 +369,12 @@ const AdminHomeSections = () => {
                     <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, maxHeight: '140px', overflowY: 'auto', paddingRight: 4 }}>
                       {pickerSection.products.map(p => (
                         <div key={p.id} style={{ display: 'flex', alignItems: 'center', gap: 8, background: 'var(--bg-tertiary)', border: '1px solid var(--border-color)', borderRadius: 8, padding: '6px 10px' }}>
-                          {p.primaryImageUrl && <img src={p.primaryImageUrl} alt={p.name} style={{ width: 32, height: 32, borderRadius: 4, objectFit: 'cover' }} />}
+                          <SafeImage
+                            src={p.primaryImageUrl}
+                            alt={p.name}
+                            style={{ width: 32, height: 32, borderRadius: 4, objectFit: 'cover' }}
+                            fallbackIconSize={16}
+                          />
                           <span style={{ fontSize: 13, color: 'var(--text-primary)', maxWidth: 140, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{p.name}</span>
                           <button onClick={() => handleRemoveProduct(p.id)}
                             style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--accent-red)', padding: 0, display: 'flex' }}>
@@ -417,10 +425,12 @@ const AdminHomeSections = () => {
                             borderLeft: isLowStock ? '3px solid #f5a623' : (inSection ? '1px solid rgba(76,175,80,0.2)' : '1px solid var(--border-color)'),
                             opacity: isOutOfStock ? 0.55 : 1,
                           }}>
-                            {p.primaryImageUrl
-                              ? <img src={p.primaryImageUrl} alt={p.name} style={{ width: 40, height: 40, borderRadius: 6, objectFit: 'cover', flexShrink: 0 }} />
-                              : <div style={{ width: 40, height: 40, borderRadius: 6, background: 'var(--bg-secondary)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}><MdImage size={20} color="var(--text-muted)" /></div>
-                            }
+                            <SafeImage
+                              src={p.primaryImageUrl}
+                              alt={p.name}
+                              style={{ width: 40, height: 40, borderRadius: 6, objectFit: 'cover', flexShrink: 0 }}
+                              fallbackIconSize={20}
+                            />
                             <div style={{ flex: 1, minWidth: 0 }}>
                               <p style={{
                                 margin: 0,

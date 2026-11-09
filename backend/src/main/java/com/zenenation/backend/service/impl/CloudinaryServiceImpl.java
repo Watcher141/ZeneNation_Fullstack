@@ -61,9 +61,10 @@ public class CloudinaryServiceImpl implements CloudinaryService {
         validateImageFile(file);
 
         try {
-            // Generate a unique public ID to avoid collisions
-            // Format: folder/uuid — e.g. "ecommerce/products/a1b2c3d4..."
-            String publicId = folder + "/" + UUID.randomUUID();
+            // Generate a unique public ID (UUID only)
+            // When folder is passed in upload options, Cloudinary will place this ID under that folder:
+            // resulting in "folder/uuid" rather than "folder/folder/uuid".
+            String publicId = UUID.randomUUID().toString();
 
             @SuppressWarnings("unchecked")
             Map<String, Object> uploadResult = cloudinary.uploader().upload(
@@ -124,10 +125,9 @@ public class CloudinaryServiceImpl implements CloudinaryService {
                 log.warn("Cloudinary delete result for publicId={}: {}", publicId, resultStatus);
             }
 
-        } catch (IOException e) {
-            // Log the error but don't throw — a failed delete should not
-            // break the user's operation (product update, category update etc.)
-            // The orphaned image can be cleaned up manually on Cloudinary dashboard.
+        } catch (Exception e) {
+            // Log the error but don't throw — a failed delete (e.g. invalid cloud credentials,
+            // already deleted account/asset) should not break product/category updates.
             log.error("Failed to delete image from Cloudinary: publicId={}, error={}",
                     publicId, e.getMessage());
         }

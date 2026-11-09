@@ -2,6 +2,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import AdminLayout from '../../components/admin/AdminLayout';
 import Loader from '../../components/common/Loader';
+import SafeImage from '../../components/common/SafeImage';
 import { categoryApi } from '../../api/categoryApi';
 import toast from 'react-hot-toast';
 import { MdAdd, MdEdit, MdDelete, MdImage, MdExpandMore, MdExpandLess, MdSubdirectoryArrowRight, MdClose } from 'react-icons/md';
@@ -146,12 +147,12 @@ const AdminCategories = () => {
                     <td className="text-muted text-sm">{cat.description || '—'}</td>
                     <td>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                        {cat.imageUrl
-                          ? <img src={cat.imageUrl} alt={cat.name} style={{ width: 40, height: 40, borderRadius: 4, objectFit: 'cover' }} />
-                          : <div style={{ width: 40, height: 40, background: 'var(--bg-tertiary)', borderRadius: 4, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                              <MdImage size={20} color="var(--text-muted)" />
-                            </div>
-                        }
+                        <SafeImage
+                          src={cat.imageUrl}
+                          alt={cat.name}
+                          style={{ width: 40, height: 40, borderRadius: 4, objectFit: 'cover' }}
+                          fallbackIconSize={20}
+                        />
                         <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
                           <input type="file" accept="image/*" style={{ fontSize: 10, maxWidth: 120 }}
                             onChange={e => setImageFile(e.target.files[0])} />
@@ -195,12 +196,12 @@ const AdminCategories = () => {
                       <td className="text-muted text-sm">{sub.description || '—'}</td>
                       <td>
                         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                          {sub.imageUrl
-                            ? <img src={sub.imageUrl} alt={sub.name} style={{ width: 40, height: 40, borderRadius: 4, objectFit: 'cover' }} />
-                            : <div style={{ width: 40, height: 40, background: 'var(--bg-tertiary)', borderRadius: 4, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                                <MdImage size={20} color="var(--text-muted)" />
-                              </div>
-                          }
+                          <SafeImage
+                            src={sub.imageUrl}
+                            alt={sub.name}
+                            style={{ width: 40, height: 40, borderRadius: 4, objectFit: 'cover' }}
+                            fallbackIconSize={20}
+                          />
                           <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
                             <input type="file" accept="image/*" style={{ fontSize: 10, maxWidth: 120 }}
                               onChange={e => setImageFile(e.target.files[0])} />

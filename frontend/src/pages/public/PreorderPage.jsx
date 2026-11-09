@@ -5,6 +5,7 @@ import { productApi } from '../../api/productApi';
 import { useAuth } from '../../context/AuthContext';
 import { useCart } from '../../context/CartContext';
 import StarRating from '../../components/product/StarRating';
+import SafeImage from '../../components/common/SafeImage';
 import Loader from '../../components/common/Loader';
 import toast from 'react-hot-toast';
 import {
@@ -83,10 +84,11 @@ const PreorderPage = () => {
               <div key={product.id} className="preorder-card">
                 {/* Image */}
                 <Link to={`/products/${product.slug}`} className="preorder-card-image">
-                  {product.primaryImageUrl
-                    ? <img src={product.primaryImageUrl} alt={product.name} />
-                    : <div className="preorder-no-img"><MdImage size={40} color="var(--text-muted)" /></div>
-                  }
+                  <SafeImage
+                    src={product.primaryImageUrl}
+                    alt={product.name}
+                    fallbackIconSize={40}
+                  />
                   <div className="preorder-label"><MdRocketLaunch size={12} /> PREORDER</div>
                 </Link>
 

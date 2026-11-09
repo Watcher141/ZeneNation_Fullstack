@@ -2,6 +2,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import AdminLayout from '../../components/admin/AdminLayout';
 import ImageUploader from '../../components/admin/ImageUploader';
+import SafeImage from '../../components/common/SafeImage';
 import Loader from '../../components/common/Loader';
 import { productApi } from '../../api/productApi';
 import { categoryApi } from '../../api/categoryApi';
@@ -389,10 +390,12 @@ const AdminProducts = () => {
                   {filteredProducts.map((p) => (
                     <tr key={p.id}>
                       <td>
-                        {p.primaryImageUrl
-                          ? <img src={p.primaryImageUrl} alt={p.name} style={{ width: 48, height: 48, borderRadius: 8, objectFit: 'cover' }} />
-                          : <div style={{ width: 48, height: 48, background: 'var(--bg-hover)', borderRadius: 8, display: 'flex', alignItems: 'center', justifyContent: 'center' }}><MdImage size={24} color="var(--text-muted)" /></div>
-                        }
+                        <SafeImage
+                          src={p.primaryImageUrl}
+                          alt={p.name}
+                          style={{ width: 48, height: 48, borderRadius: 8, objectFit: 'cover' }}
+                          fallbackIconSize={24}
+                        />
                       </td>
                       <td style={{ maxWidth: 180 }}>
                         <div style={{ fontWeight: 600, color: 'var(--text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{p.name}</div>

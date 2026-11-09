@@ -4,6 +4,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { useCart } from '../../context/CartContext';
 import { shippingApi } from '../../api/apiCollections';
 import Loader from '../../components/common/Loader';
+import SafeImage from '../../components/common/SafeImage';
 import toast from 'react-hot-toast';
 import { MdShoppingCart, MdImage, MdClose, MdLocalShipping, MdCheckCircle } from 'react-icons/md';
 import './CartPage.css';
@@ -131,10 +132,11 @@ const CartPage = () => {
                   return (
                     <div key={item.cartItemId} className="cart-item">
                       <div className="cart-item-image">
-                        {item.primaryImageUrl
-                          ? <img src={item.primaryImageUrl} alt={item.productName} />
-                          : <span><MdImage size={28} color="var(--text-muted)" /></span>
-                        }
+                        <SafeImage
+                          src={item.primaryImageUrl}
+                          alt={item.productName}
+                          fallbackIconSize={24}
+                        />
                       </div>
                       <div className="cart-item-info">
                         <Link to={`/products/${item.productSlug}`} className="cart-item-name">
@@ -196,10 +198,11 @@ const CartPage = () => {
                       return (
                         <div key={item.cartItemId} className="cart-item cart-bundle-item">
                           <div className="cart-item-image">
-                            {item.primaryImageUrl
-                              ? <img src={item.primaryImageUrl} alt={item.productName} />
-                              : <span><MdImage size={28} color="var(--text-muted)" /></span>
-                            }
+                            <SafeImage
+                              src={item.primaryImageUrl}
+                              alt={item.productName}
+                              fallbackIconSize={24}
+                            />
                           </div>
                           <div className="cart-item-info">
                             <Link to={`/products/${item.productSlug}`} className="cart-item-name">

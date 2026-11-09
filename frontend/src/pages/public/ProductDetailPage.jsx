@@ -5,6 +5,7 @@ import { productApi } from '../../api/productApi';
 import { useCart } from '../../context/CartContext';
 import { useAuth } from '../../context/AuthContext';
 import Loader from '../../components/common/Loader';
+import SafeImage from '../../components/common/SafeImage';
 import StarRating from '../../components/product/StarRating';
 import ProductReviews from '../../components/product/ProductReviews';
 import FrequentlyBoughtTogether from '../../components/product/FrequentlyBoughtTogether';
@@ -102,10 +103,11 @@ const ProductDetailPage = () => {
           {/* Images */}
           <div className="product-detail-gallery">
             <div className="product-detail-main-img">
-              {currentImage
-                ? <img src={currentImage.imageUrl} alt={product.name} />
-                : <div className="product-detail-no-img"><MdImage size={64} color="var(--text-muted)" /></div>
-              }
+              <SafeImage
+                src={currentImage?.imageUrl}
+                alt={product.name}
+                fallbackIconSize={64}
+              />
             </div>
             {images.length > 1 && (
               <div className="product-detail-thumbs">
@@ -113,7 +115,11 @@ const ProductDetailPage = () => {
                   <button key={img.id}
                     className={`product-detail-thumb ${selectedImage === i ? 'active' : ''}`}
                     onClick={() => setSelectedImage(i)}>
-                    <img src={img.imageUrl} alt={`${product.name} ${i + 1}`} />
+                    <SafeImage
+                      src={img.imageUrl}
+                      alt={`${product.name} ${i + 1}`}
+                      fallbackIconSize={20}
+                    />
                   </button>
                 ))}
               </div>
