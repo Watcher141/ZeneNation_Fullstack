@@ -16,9 +16,11 @@ const RegisterPage = () => {
   const handleChange = (e) => setForm({ ...form, [e.target.name]: e.target.value });
 
   //Adding Google Registartion 03/06/2026
-  const handleGoogleLogin=()=>{
-     window.location.href =
-    `${import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080'}/oauth2/authorization/google`;
+  const handleGoogleLogin = () => {
+    const base = (import.meta.env.VITE_API_BASE_URL !== undefined && import.meta.env.VITE_API_BASE_URL !== '')
+      ? import.meta.env.VITE_API_BASE_URL
+      : (typeof window !== 'undefined' ? window.location.origin : '');
+    window.location.href = `${base}/oauth2/authorization/google`;
   }
   const handleSubmit = async (e) => {
     e.preventDefault();

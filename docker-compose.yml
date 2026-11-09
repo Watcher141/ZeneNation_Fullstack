@@ -36,6 +36,7 @@ services:
       - "127.0.0.1:8080:8080"
     environment:
       SPRING_PROFILES_ACTIVE: prod
+      SPRING_JPA_HIBERNATE_DDL_AUTO: update
       DB_URL: jdbc:postgresql://postgres:5432/${POSTGRES_DB:-ecommerce_db}
       DB_USERNAME: ${POSTGRES_USER:-postgres}
       DB_PASSWORD: ${POSTGRES_PASSWORD}
@@ -57,6 +58,7 @@ services:
       RAZORPAY_KEY_SECRET: ${RAZORPAY_KEY_SECRET}
       RAZORPAY_WEBHOOK_SECRET: ${RAZORPAY_WEBHOOK_SECRET}
       SERVER_PORT: 8080
+      SERVER_FORWARD_HEADERS_STRATEGY: framework
       FRONTEND_URL: ${FRONTEND_URL:-https://zenenation.in}
       OAUTH2_REDIRECT_URI: ${OAUTH2_REDIRECT_URI:-https://zenenation.in/oauth2/callback}
       ADMIN_EMAIL: ${ADMIN_EMAIL:-admin@zenenation.com}

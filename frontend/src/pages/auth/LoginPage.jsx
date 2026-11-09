@@ -28,7 +28,10 @@ const LoginPage = () => {
   };
 
   const handleGoogleLogin = () => {
-    window.location.href = `${import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080'}/oauth2/authorization/google`;
+    const base = (import.meta.env.VITE_API_BASE_URL !== undefined && import.meta.env.VITE_API_BASE_URL !== '')
+      ? import.meta.env.VITE_API_BASE_URL
+      : (typeof window !== 'undefined' ? window.location.origin : '');
+    window.location.href = `${base}/oauth2/authorization/google`;
   };
 
   return (
