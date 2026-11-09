@@ -7,7 +7,7 @@ import Loader from '../../components/common/Loader';
 import { productApi } from '../../api/productApi';
 import { categoryApi } from '../../api/categoryApi';
 import toast from 'react-hot-toast';
-import { MdImage, MdRocketLaunch, MdPhotoLibrary, MdClose } from 'react-icons/md';
+import { MdImage, MdRocketLaunch, MdPhotoLibrary, MdClose, MdSubdirectoryArrowRight } from 'react-icons/md';
 
 const emptyForm = {
   name: '', description: '', tagline: '', price: '', discountPercent: '0',
@@ -334,12 +334,12 @@ const AdminProducts = () => {
         </div>
 
         {/* Filters */}
-        <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', marginBottom: 16 }}>
-          <input className="form-input" style={{ flex: '1 1 200px', height: 36 }}
+        <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', alignItems: 'center', marginBottom: 16 }}>
+          <input className="form-input" style={{ flex: '1 1 200px' }}
             placeholder="Search products..." value={filterSearch}
             onChange={e => setFilterSearch(e.target.value)} />
 
-          <select className="form-select" style={{ flex: '1 1 150px', height: 36 }}
+          <select className="form-select" style={{ flex: '1 1 180px' }}
             value={filterCategory} onChange={e => setFilterCategory(e.target.value)}>
             <option value="">All Categories</option>
             {categories.map(cat => (
@@ -352,7 +352,7 @@ const AdminProducts = () => {
             ))}
           </select>
 
-          <select className="form-select" style={{ flex: '1 1 150px', height: 36 }}
+          <select className="form-select" style={{ flex: '1 1 150px' }}
             value={filterStatus} onChange={e => setFilterStatus(e.target.value)}>
             <option value="">All Status</option>
             <option value="active">Active</option>
@@ -362,7 +362,7 @@ const AdminProducts = () => {
           </select>
 
           {(filterStatus || filterSearch || filterCategory) && (
-            <button className="btn btn-ghost btn-sm" style={{ flex: '0 0 auto', height: 36 }}
+            <button className="btn btn-ghost btn-sm" style={{ flex: '0 0 auto', height: 38 }}
               onClick={() => { setFilterStatus(''); setFilterSearch(''); setFilterCategory(''); }}>
               <MdClose size={14} style={{ verticalAlign: 'middle', marginRight: 4 }} /> Clear
             </button>
@@ -371,11 +371,18 @@ const AdminProducts = () => {
 
         {/* Table Wrap */}
         <div className="admin-table-wrap" style={{ maxHeight: '70vh', overflowY: 'auto', overflowX: 'auto', width: '100%', WebkitOverflowScrolling: 'touch' }}>
-          <table className="admin-table" style={{ minWidth: '900px', width: '100%' }}>
+          <table className="admin-table" style={{ minWidth: '950px', width: '100%' }}>
             <thead style={{ position: 'sticky', top: 0, zIndex: 1, background: 'var(--bg-card)' }}>
               <tr>
-                <th>Image</th><th>Name</th><th>Category</th><th>Price</th>
-                <th>Stock</th><th>Weight</th><th>Status</th><th>Images</th><th>Actions</th>
+                <th style={{ width: 64 }}>Image</th>
+                <th>Name</th>
+                <th style={{ minWidth: 120 }}>Category</th>
+                <th style={{ minWidth: 90 }}>Price</th>
+                <th style={{ width: 70 }}>Stock</th>
+                <th style={{ width: 70 }}>Weight</th>
+                <th style={{ width: 80 }}>Status</th>
+                <th style={{ width: 80 }}>Images</th>
+                <th style={{ minWidth: 140 }}>Actions</th>
               </tr>
             </thead>
             <tbody>
@@ -405,8 +412,9 @@ const AdminProducts = () => {
                       <td>
                         <span className="badge badge-purple">{p.category?.name}</span>
                         {getParentCategoryName(p.category?.id) && (
-                          <div className="text-xs text-muted" style={{ marginTop: 2 }}>
-                            ↳ {getParentCategoryName(p.category?.id)}
+                          <div className="text-xs text-muted" style={{ marginTop: 4, display: 'flex', alignItems: 'center', gap: 2 }}>
+                            <MdSubdirectoryArrowRight size={13} style={{ color: 'var(--text-muted)' }} />
+                            <span>{getParentCategoryName(p.category?.id)}</span>
                           </div>
                         )}
                       </td>
