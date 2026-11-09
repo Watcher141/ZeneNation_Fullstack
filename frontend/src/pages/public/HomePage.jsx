@@ -265,11 +265,11 @@ const HomePage = () => {
         </section>
       )}
 
-      {/* ── Promo Banner ── */}
-      <section className="promo-banner">
-        <div className="container promo-inner">
-          {announcements.length > 0 ? (
-            <>
+      {/* ── Promo Banner / Deal Section ── */}
+      {announcements.length > 0 && (
+        <section className="promo-banner">
+          <div className="container">
+            <div className="promo-card">
               <div className="promo-content">
                 {announcements.length > 1 && (
                   <div className="promo-dots">
@@ -287,16 +287,17 @@ const HomePage = () => {
                    announcements[annIndex]?.type === 'SUCCESS' ? <><MdCheckCircle size={14} style={{ verticalAlign: 'middle', marginRight: 4 }} />Update</> :
                    announcements[annIndex]?.type === 'WARNING' ? <><MdWarning size={14} style={{ verticalAlign: 'middle', marginRight: 4 }} />Notice</> : <><MdCampaign size={14} style={{ verticalAlign: 'middle', marginRight: 4 }} />Announcement</>}
                 </div>
-                <h2>{announcements[annIndex]?.title}</h2>
-                <p className="text-secondary">{announcements[annIndex]?.message}</p>
+                <h2 className="promo-title">{announcements[annIndex]?.title}</h2>
+                <p className="promo-message">{announcements[annIndex]?.message}</p>
               </div>
-              <Link to="/products" className="btn btn-gold btn-lg">Shop Now</Link>
-            </>
-          ) : (
-            null
-          )}
-        </div>
-      </section>
+              <Link to="/products" className="promo-btn">
+                <span>Shop Now</span>
+                <span className="promo-btn-arrow">→</span>
+              </Link>
+            </div>
+          </div>
+        </section>
+      )}
 
     </div>
   );
